@@ -311,6 +311,81 @@
       overflow-wrap: anywhere;
     }
 
+    .player-trade {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+      gap: 12px;
+      align-items: stretch;
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(53, 201, 255, 0.11), transparent 48%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+        var(--panel);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .player-copy {
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .player-copy h2 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.05;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .player-copy p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.48;
+    }
+
+    .trade-widget {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .trade-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .trade-actions button {
+      min-height: 42px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .trade-actions .primary {
+      color: #06120d;
+      border-color: rgba(50, 240, 178, 0.28);
+      background: var(--mint);
+    }
+
+    .trade-actions .primary:disabled {
+      color: var(--muted);
+      background: #151a20;
+    }
+
+    .trade-readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
     .metric,
     .panel,
     .stage-shell {
@@ -670,6 +745,7 @@
     @media (max-width: 1120px) {
       .layout,
       .brief,
+      .player-trade,
       .prep-grid,
       .lower-grid {
         grid-template-columns: 1fr;
@@ -855,6 +931,25 @@
         max-width: calc(100vw - 20px);
       }
 
+      .player-trade {
+        max-width: calc(100vw - 20px);
+        padding: 12px;
+      }
+
+      .player-copy h2 {
+        font-size: 21px;
+        line-height: 1.08;
+      }
+
+      .player-copy p {
+        font-size: 13px;
+      }
+
+      .trade-actions,
+      .trade-readout {
+        grid-template-columns: 1fr;
+      }
+
       .metric {
         width: 100%;
         max-width: calc(100vw - 20px);
@@ -951,6 +1046,7 @@
         <div class="quick-actions" aria-label="Primary STOCX links">
           <a class="action-link primary" href="https://pump.fun/coin/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE" target="_blank" rel="noreferrer">Open Pump</a>
           <button id="copyCa" class="action-link" type="button">Copy CA</button>
+          <a class="action-link secondary" href="#playerTradeSection">Reward TX</a>
           <a class="action-link secondary" href="https://explorer.solana.com/address/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE?cluster=mainnet-beta" target="_blank" rel="noreferrer">CA Explorer</a>
           <a class="action-link" href="#prepSection">Proof</a>
         </div>
@@ -971,6 +1067,51 @@
         <div class="step">
           <strong>4. Try</strong>
           <p class="micro">Open Pump, make a small TSLAx trade, then refresh. Pot rows can move; reward rows need the trade+record UX.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="player-trade" id="playerTradeSection" aria-label="Trade and reward transaction">
+      <div class="player-copy">
+        <p class="eyebrow">player path</p>
+        <h2>One wallet signature: buy STOCX, record TSLAx reward.</h2>
+        <p>The proof trade is 1,000,000 STOCX or more. The current builder path fits the Solana packet with the live ALT; the wallet still needs TSLAx for the buy and a little SOL for rent and fees.</p>
+      </div>
+      <div class="trade-widget">
+        <div class="trade-actions" aria-label="Reward transaction actions">
+          <button id="connectWallet" type="button">Connect</button>
+          <button id="checkRewardTrade" type="button" disabled>Check</button>
+          <button id="signRewardTrade" class="primary" type="button" disabled>Sign trade</button>
+        </div>
+        <div class="trade-readout">
+          <div class="state-row">
+            <div class="state-main">
+              <div class="account-role">Wallet</div>
+              <div class="micro" id="playerWalletText">Not connected</div>
+            </div>
+            <span class="pill warn" id="playerWalletBadge">idle</span>
+          </div>
+          <div class="state-row">
+            <div class="state-main">
+              <div class="account-role">Reward builder</div>
+              <div class="micro" id="builderStatusText">Public signer endpoint is not connected yet.</div>
+            </div>
+            <span class="pill" id="builderBadge">local</span>
+          </div>
+          <div class="state-row">
+            <div class="state-main">
+              <div class="account-role">Trade size</div>
+              <div class="micro" id="tradeQuoteText">Minimum proof trade: 1,000,000 STOCX.</div>
+            </div>
+            <span class="pill" id="tradeQuoteBadge">TSLAx</span>
+          </div>
+          <div class="state-row">
+            <div class="state-main">
+              <div class="account-role">Reward</div>
+              <div class="micro" id="tradeRewardText">Starts at 0.00001 TSLAx; flip side can pay double after cooldown.</div>
+            </div>
+            <span class="pill ok" id="tradeRewardBadge">pot</span>
+          </div>
         </div>
       </div>
     </section>
@@ -1104,6 +1245,22 @@
       activityRecord: "EUuEuzTp3QiRRgLyro4qk5VFxwHajC9JYDYm5hLcjZTg",
       lookupTable: "FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG"
     };
+    const PLAYER_TRADE = {
+      baseAmountRaw: "1000000000000",
+      baseAmountUi: "1,000,000",
+      slippageBps: 100,
+      side: 0
+    };
+    const QUERY = new URLSearchParams(window.location.search);
+    const LOCAL_BUILDER = ["127.0.0.1", "localhost"].includes(window.location.hostname)
+      ? "http://127.0.0.1:8798"
+      : "";
+    const BUILDER_ENDPOINT = normalizeBuilderEndpoint(
+      QUERY.get("builder") || readStoredValue("stocxBuilderEndpoint") || LOCAL_BUILDER
+    );
+    if (QUERY.get("builder") && BUILDER_ENDPOINT) {
+      writeStoredValue("stocxBuilderEndpoint", BUILDER_ENDPOINT);
+    }
 
     const KNOWN_TXS = [
       {
@@ -1203,6 +1360,17 @@
       jumpPrep: document.getElementById("jumpPrep"),
       prepSection: document.getElementById("prepSection"),
       lastUpdated: document.getElementById("lastUpdated"),
+      connectWallet: document.getElementById("connectWallet"),
+      checkRewardTrade: document.getElementById("checkRewardTrade"),
+      signRewardTrade: document.getElementById("signRewardTrade"),
+      playerWalletText: document.getElementById("playerWalletText"),
+      playerWalletBadge: document.getElementById("playerWalletBadge"),
+      builderStatusText: document.getElementById("builderStatusText"),
+      builderBadge: document.getElementById("builderBadge"),
+      tradeQuoteText: document.getElementById("tradeQuoteText"),
+      tradeQuoteBadge: document.getElementById("tradeQuoteBadge"),
+      tradeRewardText: document.getElementById("tradeRewardText"),
+      tradeRewardBadge: document.getElementById("tradeRewardBadge"),
       canvas: document.getElementById("chainStage")
     };
 
@@ -1238,8 +1406,41 @@
       activityRecordSummary: null,
       programElfHash: null,
       programDataMatchesLatest: false,
+      walletProvider: null,
+      walletAddress: "",
+      playerTrade: null,
+      playerTradeSignature: "",
+      playerTradeBusy: false,
       ticks: 0
     };
+
+    function normalizeBuilderEndpoint(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value, window.location.href);
+        if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+        return url.origin + url.pathname.replace(/\/$/, "");
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function readStoredValue(key) {
+      try {
+        return window.localStorage.getItem(key);
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function writeStoredValue(key, value) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch (error) {
+        return false;
+      }
+      return true;
+    }
 
     function shortAddress(value) {
       if (!value) return "missing";
@@ -1344,6 +1545,111 @@
         }
       }
       throw lastError || new Error("All RPC endpoints failed");
+    }
+
+    function findWalletProvider() {
+      if (window.solana && window.solana.isPhantom) return window.solana;
+      if (window.solflare) return window.solflare;
+      if (window.solana) return window.solana;
+      return null;
+    }
+
+    function setTradeBusy(value) {
+      app.playerTradeBusy = value;
+      renderPlayerTrade();
+    }
+
+    async function connectPlayerWallet() {
+      const provider = findWalletProvider();
+      if (!provider) {
+        app.playerTrade = {
+          gates: { ok: false, failures: ["No Solana wallet found in this browser."] }
+        };
+        renderPlayerTrade();
+        return;
+      }
+      setTradeBusy(true);
+      try {
+        const result = await provider.connect();
+        app.walletProvider = provider;
+        app.walletAddress = String(result?.publicKey || provider.publicKey || "");
+        app.playerTradeSignature = "";
+      } catch (error) {
+        app.playerTrade = {
+          gates: { ok: false, failures: [String(error.message || error)] }
+        };
+      } finally {
+        setTradeBusy(false);
+      }
+    }
+
+    async function callBuilder(kind) {
+      if (!BUILDER_ENDPOINT) {
+        throw new Error("Reward signer endpoint is not connected yet.");
+      }
+      if (!app.walletAddress) {
+        throw new Error("Connect wallet first.");
+      }
+      const url = new URL("/api/stocx/" + kind, BUILDER_ENDPOINT);
+      url.searchParams.set("user", app.walletAddress);
+      url.searchParams.set("baseAmountRaw", PLAYER_TRADE.baseAmountRaw);
+      url.searchParams.set("slippageBps", String(PLAYER_TRADE.slippageBps));
+      url.searchParams.set("side", String(PLAYER_TRADE.side));
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error("Builder HTTP " + response.status);
+      const payload = await response.json();
+      if (payload.error) throw new Error(payload.error);
+      return payload;
+    }
+
+    async function checkRewardTrade() {
+      setTradeBusy(true);
+      try {
+        app.playerTrade = await callBuilder("measure");
+        app.playerTradeSignature = "";
+      } catch (error) {
+        app.playerTrade = {
+          gates: { ok: false, failures: [String(error.message || error)] }
+        };
+      } finally {
+        setTradeBusy(false);
+      }
+    }
+
+    async function signRewardTrade() {
+      const provider = app.walletProvider || findWalletProvider();
+      if (!provider || !provider.request) {
+        app.playerTrade = {
+          gates: { ok: false, failures: ["Wallet signing API is unavailable."] }
+        };
+        renderPlayerTrade();
+        return;
+      }
+      setTradeBusy(true);
+      try {
+        const built = await callBuilder("build");
+        app.playerTrade = built;
+        if (!built.transaction || !built.transaction.message) {
+          const reason = built.gates?.failures?.[0] || "Builder did not return a signable transaction.";
+          throw new Error(reason);
+        }
+        const result = await provider.request({
+          method: "signAndSendTransaction",
+          params: { message: built.transaction.message }
+        });
+        app.playerTradeSignature = String(result?.signature || result || "");
+      } catch (error) {
+        const previous = app.playerTrade || {};
+        app.playerTrade = {
+          ...previous,
+          gates: { ok: false, failures: [String(error.message || error)] }
+        };
+      } finally {
+        setTradeBusy(false);
+      }
     }
 
     async function readAccounts(addresses) {
@@ -1514,7 +1820,74 @@
       `;
     }
 
+    function renderPlayerTrade() {
+      const trade = app.playerTrade;
+      const gateOk = Boolean(trade?.gates?.ok);
+      const failures = trade?.gates?.failures || [];
+      const warnings = trade?.gates?.warnings || [];
+      const packet = trade?.packet?.v0LiveAlt;
+      const price = trade?.price;
+      const reward = trade?.expectedReward;
+      const signerReady = Boolean(app.walletAddress && BUILDER_ENDPOINT && gateOk && packet?.fitsPacket);
+
+      ui.connectWallet.disabled = app.playerTradeBusy;
+      ui.connectWallet.textContent = app.walletAddress ? shortAddress(app.walletAddress) : "Connect";
+      ui.checkRewardTrade.disabled = app.playerTradeBusy || !app.walletAddress || !BUILDER_ENDPOINT;
+      ui.signRewardTrade.disabled = app.playerTradeBusy || !signerReady;
+      ui.signRewardTrade.textContent = app.playerTradeBusy ? "Working" : "Sign trade";
+
+      ui.playerWalletText.textContent = app.walletAddress || "Not connected";
+      ui.playerWalletBadge.textContent = app.walletAddress ? "ready" : "idle";
+      ui.playerWalletBadge.className = app.walletAddress ? "pill ok" : "pill warn";
+
+      if (!BUILDER_ENDPOINT) {
+        ui.builderStatusText.textContent = "Public signer endpoint is not connected yet.";
+        ui.builderBadge.textContent = "pending";
+        ui.builderBadge.className = "pill warn";
+      } else if (app.playerTradeBusy) {
+        ui.builderStatusText.textContent = "Checking wallet path against live mainnet state.";
+        ui.builderBadge.textContent = "checking";
+        ui.builderBadge.className = "pill warn";
+      } else if (app.playerTradeSignature) {
+        ui.builderStatusText.textContent = "Sent: " + shortAddress(app.playerTradeSignature);
+        ui.builderBadge.textContent = "sent";
+        ui.builderBadge.className = "pill ok";
+      } else if (gateOk && packet?.fitsPacket) {
+        ui.builderStatusText.textContent = "Ready: v0 packet " + packet.transactionBytes + " bytes, " + packet.headroomBytes + " bytes spare.";
+        ui.builderBadge.textContent = "ready";
+        ui.builderBadge.className = "pill ok";
+      } else if (failures.length) {
+        ui.builderStatusText.textContent = failures[0];
+        ui.builderBadge.textContent = "blocked";
+        ui.builderBadge.className = "pill bad";
+      } else {
+        const endpointHost = new URL(BUILDER_ENDPOINT).host;
+        ui.builderStatusText.textContent = "Endpoint: " + endpointHost + ". Check wallet before signing.";
+        ui.builderBadge.textContent = "api";
+        ui.builderBadge.className = "pill";
+      }
+
+      if (price) {
+        ui.tradeQuoteText.textContent = "Cost cap: " + price.quoteWithSlippageUi + " TSLAx for " + price.baseAmountUi + " STOCX.";
+        ui.tradeQuoteBadge.textContent = packet?.fitsPacket ? String(packet.transactionBytes) + " B" : "packet";
+        ui.tradeQuoteBadge.className = packet?.fitsPacket ? "pill ok" : "pill warn";
+      } else {
+        ui.tradeQuoteText.textContent = "Minimum proof trade: " + PLAYER_TRADE.baseAmountUi + " STOCX.";
+        ui.tradeQuoteBadge.textContent = "TSLAx";
+        ui.tradeQuoteBadge.className = "pill";
+      }
+
+      if (reward) {
+        ui.tradeRewardText.textContent = "Expected reward: " + reward.ui + " " + reward.token + (warnings.length ? ". " + warnings[0] : ".");
+      } else {
+        ui.tradeRewardText.textContent = "Starts at 0.00001 TSLAx; flip side can pay double after cooldown.";
+      }
+      ui.tradeRewardBadge.textContent = gateOk ? "green" : "pot";
+      ui.tradeRewardBadge.className = gateOk ? "pill ok" : "pill";
+    }
+
     function render() {
+      renderPlayerTrade();
       const program = app.accounts[ADDRESSES.program];
       const programData = app.accounts[ADDRESSES.programData];
       const config = app.accounts[ADDRESSES.config];
@@ -1936,6 +2309,9 @@
     ui.refreshNow.addEventListener("click", refresh);
     ui.liveMode.addEventListener("click", () => setMode("live"));
     ui.storyMode.addEventListener("click", () => setMode("story"));
+    ui.connectWallet.addEventListener("click", connectPlayerWallet);
+    ui.checkRewardTrade.addEventListener("click", checkRewardTrade);
+    ui.signRewardTrade.addEventListener("click", signRewardTrade);
     ui.jumpPrep.addEventListener("click", () => {
       ui.prepSection.scrollIntoView({ behavior: app.paused ? "auto" : "smooth", block: "start" });
     });

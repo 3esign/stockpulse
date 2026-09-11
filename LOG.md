@@ -1,0 +1,3 @@
+# STOCX site log
+
+2026-09-11T16:37:52+02:00 · Codex/Svemir · Added the player `trade + record` site panel and a no-keypair STOCX builder/checker · Local builder measured the public wallet path at 709 bytes with 523 bytes spare using the live ALT; no transaction was signed or sent.

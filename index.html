@@ -1896,25 +1896,26 @@
       const deployer = app.accounts[ADDRESSES.deployer];
       const semir = app.accounts[ADDRESSES.semir];
       const programDataSize = accountBytes(programData);
+      const hasAccountRead = Boolean(Object.keys(app.accounts).length || app.lastError);
       const programSeen = Boolean(program && programData);
       const programLatest = Boolean(programSeen && app.programDataMatchesLatest);
       const programHashNote = app.programElfHash ? " / ELF " + app.programElfHash.slice(0, 8) : " / hash pending";
       const pulseCount = Math.max(KNOWN_TXS.length, app.signatures.length);
 
-      ui.metricProgram.textContent = programLatest ? "Live" : (programSeen ? "Upgrade pending" : "Watching");
-      ui.badgeProgram.textContent = programLatest ? "19,136 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet");
-      ui.badgeProgram.className = programLatest ? "pill ok" : "pill warn";
+      ui.metricProgram.textContent = !hasAccountRead ? "Checking" : (programLatest ? "Live" : (programSeen ? "Upgrade pending" : "Watching"));
+      ui.badgeProgram.textContent = !hasAccountRead ? "RPC" : (programLatest ? "19,136 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet"));
+      ui.badgeProgram.className = !hasAccountRead ? "pill" : (programLatest ? "pill ok" : "pill warn");
       ui.programSub.textContent = shortAddress(ADDRESSES.program) + " / target " + PROGRAM_INTEGRITY.expectedLocalSha256.slice(0, 8) + programHashNote;
 
-      ui.metricConfig.textContent = config ? "Initialized" : "Not sent";
-      ui.badgeConfig.textContent = config ? "live" : "gate";
-      ui.badgeConfig.className = config ? "pill ok" : "pill warn";
-      ui.configSub.textContent = config ? "Config PDA exists on mainnet." : "Config is missing; launch proof is incomplete.";
+      ui.metricConfig.textContent = !hasAccountRead ? "Checking" : (config ? "Initialized" : "Not sent");
+      ui.badgeConfig.textContent = !hasAccountRead ? "PDA" : (config ? "live" : "gate");
+      ui.badgeConfig.className = !hasAccountRead ? "pill" : (config ? "pill ok" : "pill warn");
+      ui.configSub.textContent = !hasAccountRead ? "Config PDA is initialized on mainnet." : (config ? "Config PDA exists on mainnet." : "Config is missing; launch proof is incomplete.");
 
-      ui.metricPot.textContent = potAta ? (app.tokenAmount || "live") : "Empty";
-      ui.badgePot.textContent = potAta ? "funded" : "not born";
-      ui.badgePot.className = potAta ? "pill ok" : "pill warn";
-      ui.potSub.textContent = potAta ? "Reward pot ATA is live and watched directly." : "Pot ATA is expected but still not created.";
+      ui.metricPot.textContent = !hasAccountRead ? "Checking" : (potAta ? (app.tokenAmount || "live") : "Empty");
+      ui.badgePot.textContent = !hasAccountRead ? "Token-2022" : (potAta ? "funded" : "not born");
+      ui.badgePot.className = !hasAccountRead ? "pill" : (potAta ? "pill ok" : "pill warn");
+      ui.potSub.textContent = !hasAccountRead ? "Pot ATA is watched directly." : (potAta ? "Reward pot ATA is live and watched directly." : "Pot ATA is expected but still not created.");
 
       ui.metricPulse.textContent = String(pulseCount);
       ui.badgePulse.textContent = app.signatures.length ? "live" : "known";
@@ -1922,13 +1923,13 @@
       ui.pulseSub.textContent = app.signatures.length ? "Recent program signatures include the launch proof." : "Showing known launch txs while RPC signatures load.";
 
       ui.stateList.innerHTML = [
-        row("Latest reward build", programLatest ? "live" : "upgrade pending", programLatest ? "ok" : "warn", "19,136-byte claim-gated artifact matches the padded ProgramData hash."),
-        row("STOCX CA", app.accounts[ADDRESSES.plannedGameMint] ? "live" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : "warn", ADDRESSES.plannedGameMint),
+        row("Latest reward build", programLatest ? "live" : (!hasAccountRead ? "checking" : "upgrade pending"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "19,136-byte claim-gated artifact matches the padded ProgramData hash."),
+        row("STOCX CA", app.accounts[ADDRESSES.plannedGameMint] ? "live" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.plannedGameMint),
         row("Fee-share split", "locked", "ok", "66.33% pot authority / 33.67% Semir wallet, admin revoked."),
-        row("Launch config PDA", config ? "exists" : "empty", config ? "ok" : "warn", ADDRESSES.config),
+        row("Launch config PDA", config ? "exists" : (!hasAccountRead ? "checking" : "empty"), config ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.config),
         row("Pot authority PDA", "derived", "ok", ADDRESSES.potAuthority),
-        row("TSLAx pot ATA", potAta ? "exists" : "empty", potAta ? "ok" : "warn", ADDRESSES.tslaxPotAta),
-        row("Buy/sell rewards", programLatest && config && potAta ? "live proof" : "waiting", programLatest && config && potAta ? "ok" : "warn", "First buy plus activity record is finalized; future trades can be watched from here.")
+        row("TSLAx pot ATA", potAta ? "exists" : (!hasAccountRead ? "checking" : "empty"), potAta ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.tslaxPotAta),
+        row("Buy/sell rewards", programLatest && config && potAta ? "live proof" : (!hasAccountRead ? "checking" : "waiting"), programLatest && config && potAta ? "ok" : (!hasAccountRead ? "idle" : "warn"), "First buy plus activity record is finalized; future trades can be watched from here.")
       ].join("");
 
       ui.walletList.innerHTML = [

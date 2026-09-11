@@ -342,6 +342,7 @@
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
+      min-width: 0;
     }
 
     .legend-item {
@@ -351,6 +352,7 @@
       border-radius: var(--radius);
       background: rgba(9, 12, 16, 0.76);
       backdrop-filter: blur(10px);
+      min-width: 0;
     }
 
     .legend strong {
@@ -422,6 +424,15 @@
 
     .state-main {
       min-width: 0;
+    }
+
+    .state-main .micro,
+    .legend-item .micro {
+      overflow-wrap: anywhere;
+    }
+
+    .state-row .pill {
+      justify-self: end;
     }
 
     .flow-row {
@@ -650,6 +661,7 @@
         left: auto;
         right: auto;
         bottom: auto;
+        width: 100%;
         padding: 0 14px 14px;
       }
 
@@ -756,9 +768,9 @@
 
     <section class="status-band" aria-label="Primary on-chain state">
       <article class="metric">
-        <p class="label">Program</p>
+        <p class="label">Program integrity</p>
         <div class="metric-value"><span id="metricProgram">Checking</span><span id="badgeProgram" class="pill">RPC</span></div>
-        <p class="micro" id="programSub">GPYNqn...G6eDH</p>
+        <p class="micro" id="programSub">Latest claim-gated build must match ProgramData.</p>
       </article>
       <article class="metric">
         <p class="label">Launch config</p>
@@ -792,8 +804,8 @@
         <canvas id="chainStage" aria-label="Animated STOCX on-chain dashboard"></canvas>
         <div class="legend" aria-label="Visual legend">
           <div class="legend-item">
-            <strong>Green core</strong>
-            <p class="micro">The upgraded fixed program and ProgramData account.</p>
+            <strong>Core ring</strong>
+            <p class="micro">Green only after the latest build is live.</p>
           </div>
           <div class="legend-item">
             <strong>Glass pot</strong>
@@ -882,6 +894,11 @@
 
     const KNOWN_TXS = [
       {
+        label: "Fee-share locked",
+        signature: "63xtzEtcS3SiFsPjV48YDJ4y6VaJvBrPF8RNR8u42aZkYiDYRonw4cJxxuiwUBKqZQHupLBToZgAVehhHW8vzqeF",
+        tone: "locked"
+      },
+      {
         label: "STOCX token create",
         signature: "5ZwJUg9dTQv3c7K3315b123XwQkiQiYy5DyZR5CGFp1nDYiC4ZgyGdJjPigK5PhRtQhcRKPuZWNbdFhHLWkokNSs",
         tone: "launch"
@@ -902,6 +919,13 @@
         tone: "upgrade"
       }
     ];
+
+    const PROGRAM_INTEGRITY = {
+      expectedElfBytes: 19136,
+      programDataElfZoneBytes: 24536,
+      expectedLocalSha256: "B7073104B7E5B7C57CD0FD8FC00B655F7FD345F1870FB736512590A535D2398C",
+      expectedPaddedSha256: "D1C5AD3AA737BD411539345577952F84217FDA92E455D5210EFE61CEE680D251"
+    };
 
     const ui = {
       refreshNow: document.getElementById("refreshNow"),
@@ -965,6 +989,8 @@
       signatures: [],
       accounts: {},
       tokenAmount: null,
+      programElfHash: null,
+      programDataMatchesLatest: false,
       ticks: 0
     };
 
@@ -1006,13 +1032,32 @@
       return TX_EXPLORER + signature + "?cluster=mainnet-beta";
     }
 
-    function accountBytes(account) {
+    function accountDataBytes(account) {
       if (!account || !account.data || !Array.isArray(account.data)) return null;
       try {
-        return atob(account.data[0]).length;
+        const raw = atob(account.data[0]);
+        const bytes = new Uint8Array(raw.length);
+        for (let index = 0; index < raw.length; index += 1) {
+          bytes[index] = raw.charCodeAt(index);
+        }
+        return bytes;
       } catch (error) {
         return null;
       }
+    }
+
+    function accountBytes(account) {
+      const bytes = accountDataBytes(account);
+      return bytes ? bytes.length : null;
+    }
+
+    async function sha256Hex(bytes) {
+      if (!window.crypto || !window.crypto.subtle) return null;
+      const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
     }
 
     async function rpc(method, params) {
@@ -1080,6 +1125,17 @@
           app.accounts[address] = accounts.value[index];
         });
         app.signatures = Array.isArray(signatures) ? signatures : [];
+        app.programElfHash = null;
+        app.programDataMatchesLatest = false;
+
+        const programDataBytes = accountDataBytes(app.accounts[ADDRESSES.programData]);
+        if (programDataBytes && programDataBytes.length > 45) {
+          const elfZone = programDataBytes.slice(45);
+          app.programElfHash = await sha256Hex(elfZone);
+          app.programDataMatchesLatest =
+            elfZone.length === PROGRAM_INTEGRITY.programDataElfZoneBytes &&
+            app.programElfHash === PROGRAM_INTEGRITY.expectedPaddedSha256;
+        }
 
         if (app.accounts[ADDRESSES.tslaxPotAta]) {
           try {
@@ -1184,12 +1240,15 @@
       const deployer = app.accounts[ADDRESSES.deployer];
       const semir = app.accounts[ADDRESSES.semir];
       const programDataSize = accountBytes(programData);
+      const programSeen = Boolean(program && programData);
+      const programLatest = Boolean(programSeen && app.programDataMatchesLatest);
+      const programHashNote = app.programElfHash ? " / ELF " + app.programElfHash.slice(0, 8) : " / hash pending";
       const pulseCount = Math.max(KNOWN_TXS.length, app.signatures.length);
 
-      ui.metricProgram.textContent = program && programData ? "Fixed" : "Watching";
-      ui.badgeProgram.textContent = programDataSize ? String(programDataSize) + " B" : "mainnet";
-      ui.badgeProgram.className = program && programData ? "pill ok" : "pill warn";
-      ui.programSub.textContent = shortAddress(ADDRESSES.program) + " / ProgramData " + shortAddress(ADDRESSES.programData);
+      ui.metricProgram.textContent = programLatest ? "Ready" : (programSeen ? "Upgrade pending" : "Watching");
+      ui.badgeProgram.textContent = programLatest ? "19,136 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet");
+      ui.badgeProgram.className = programLatest ? "pill ok" : "pill warn";
+      ui.programSub.textContent = shortAddress(ADDRESSES.program) + " / target " + PROGRAM_INTEGRITY.expectedLocalSha256.slice(0, 8) + programHashNote;
 
       ui.metricConfig.textContent = config ? "Initialized" : "Not sent";
       ui.badgeConfig.textContent = config ? "live" : "gate";
@@ -1207,12 +1266,13 @@
       ui.pulseSub.textContent = app.signatures.length ? "Recent program signatures are visible." : "Showing repair txs while launch flow waits.";
 
       ui.stateList.innerHTML = [
-        row("Fixed build deployed", programData ? "yes" : "check", programData ? "ok" : "warn", "18,456-byte fixed STOCX Etude artifact is the expected live state."),
+        row("Latest reward build", programLatest ? "live" : "upgrade pending", programLatest ? "ok" : "warn", "19,136-byte claim-gated artifact is built and tested locally; mainnet must match before funding."),
         row("STOCX CA", app.accounts[ADDRESSES.plannedGameMint] ? "live" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : "warn", ADDRESSES.plannedGameMint),
+        row("Fee-share split", "locked", "ok", "66.33% pot authority / 33.67% Semir wallet, admin revoked."),
         row("Launch config PDA", config ? "exists" : "empty", config ? "ok" : "warn", ADDRESSES.config),
         row("Pot authority PDA", potAuthority ? "exists" : "PDA only", potAuthority ? "ok" : "warn", ADDRESSES.potAuthority),
         row("TSLAx pot ATA", potAta ? "exists" : "empty", potAta ? "ok" : "warn", ADDRESSES.tslaxPotAta),
-        row("Buy/sell rewards", config && potAta ? "armed" : "waiting", config && potAta ? "ok" : "warn", "They activate after init, launch token flow and pot funding.")
+        row("Buy/sell rewards", programLatest && config && potAta ? "armed" : "waiting", programLatest && config && potAta ? "ok" : "warn", "They activate only after upgrade, init, ALT warmup, TSLAx balance and pot funding.")
       ].join("");
 
       ui.walletList.innerHTML = [
@@ -1224,23 +1284,23 @@
 
       const liveWeight = Math.min(100, app.signatures.length * 9);
       const potWeight = potAta ? 68 : 4;
-      const buyWeight = config && potAta ? Math.max(18, liveWeight) : 8;
-      const sellWeight = config && potAta ? Math.max(12, Math.round(liveWeight * 0.62)) : 3;
+      const buyWeight = programLatest && config && potAta ? Math.max(18, liveWeight) : 8;
+      const sellWeight = programLatest && config && potAta ? Math.max(12, Math.round(liveWeight * 0.62)) : 3;
       ui.flowList.innerHTML = [
         flowRow("Pot", potWeight, potAta ? "armed" : "empty", false),
-        flowRow("Buys", buyWeight, config ? "watching" : "waiting", false),
-        flowRow("Sells", sellWeight, config ? "watching" : "waiting", true),
+        flowRow("Buys", buyWeight, programLatest && config ? "watching" : "waiting", false),
+        flowRow("Sells", sellWeight, programLatest && config ? "watching" : "waiting", true),
         flowRow("Wallets", semir || deployer ? 54 : 18, "tracked", false),
         flowRow("RPC", app.lastError ? 16 : 82, app.lastError ? "fallback" : "live", Boolean(app.lastError))
       ].join("");
 
       ui.launchPrepList.innerHTML = [
-        row("1. Program repair", programData ? "done" : "check", programData ? "ok" : "warn", "Fixed build is live before launch."),
+        row("1. Program upgrade", programLatest ? "done" : "needs go", programLatest ? "ok" : "warn", "Deploy the local 19,136-byte claim-gated build only after Semir confirms."),
         row("2. Token create", app.accounts[ADDRESSES.plannedGameMint] ? "done" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : "warn", "CA is live on pump.fun: " + ADDRESSES.plannedGameMint),
-        row("3. Init config", config ? "done" : "needs go", config ? "ok" : "warn", "Creates config and TSLAx pot ATA. Not sent yet."),
-        row("4. Fee sharing", "dry-run blocked", "warn", "TSLAx updateFeeSharesV2 needs one more isolated account-layout fix before locking."),
+        row("3. Fee sharing", "done", "ok", "Locked on-chain; pot authority is the primary shareholder."),
+        row("4. Init config", config ? "done" : "needs go", config ? "ok" : "warn", "Creates config and TSLAx pot ATA after the program upgrade. Not sent yet."),
         row("5. ALT setup", "needs go", "warn", "30-address table, exact packet edge, warm one later slot."),
-        row("6. First buy + record", config && potAta ? "simulate" : "blocked", config && potAta ? "warn" : "bad", "Requires real TSLAx quote balance and warmed ALT.")
+        row("6. First buy + record", programLatest && config && potAta ? "simulate" : "blocked", programLatest && config && potAta ? "warn" : "bad", "Requires real TSLAx quote balance and warmed ALT.")
       ].join("");
 
       const potReady = Boolean(potAta);
@@ -1254,16 +1314,16 @@
 
       ui.fundingList.innerHTML = [
         row("Future pot ATA", shortAddress(ADDRESSES.tslaxPotAta), potReady ? "ok" : "warn", ADDRESSES.tslaxPotAta),
-        row("First-buy wallet", "0.0101 min", "warn", ADDRESSES.deployer + " needs TSLAx before create+buy; this is separate from pot funding."),
+        row("First-buy wallet", "0.0101 min", "warn", ADDRESSES.deployer + " needs TSLAx before the first buy; this is separate from pot funding."),
         presetRow(ECONOMICS.lean, "ok"),
         presetRow(ECONOMICS.standard, "warn"),
         row("Wallet send rule", potReady ? "allowed" : "blocked", potReady ? "ok" : "bad", "Never send TSLAx to the pot authority; fund the Token-2022 ATA only after it exists.")
       ].join("");
 
       ui.manualGoList.innerHTML = [
-        row("Need Semir confirm", "yes", "warn", "No deploy, init, ALT, create, buy, or funding send without explicit go."),
+        row("Need Semir confirm", "yes", "warn", "No program upgrade, init, ALT, swap, buy, or pot funding without explicit go."),
         row("SOL deployer reserve", deployer ? sol(deployer.lamports) : "n/a", deployer ? "ok" : "warn", "Enough for guarded prep transactions, subject to fresh check."),
-        row("TSLAx launch balance", "missing", "warn", "Launch wallet still needs a TSLAx ATA and quote balance before first buy."),
+        row("TSLAx launch balance", "0 TSLAx", "warn", "Launch wallet has its ATA but still needs quote balance before first buy."),
         row("Recommended first pot", "lean", "ok", "Use the lean preset for first live proof, then scale after real buy/sell path behaves.")
       ].join("");
 
@@ -1277,15 +1337,15 @@
         label: tx.label,
         signature: tx.signature,
         state: tx.tone,
-        sub: "Known STOCX repair event"
+        sub: tx.label === "Fee-share locked" ? "Known STOCX launch event" : "Known STOCX repair event"
       }));
       ui.eventList.innerHTML = liveEvents.concat(knownEvents).slice(0, 12)
         .map((event) => eventRow(event.label, event.signature, event.state, event.sub))
         .join("");
 
       ui.accountList.innerHTML = [
-        accountRow("Program", ADDRESSES.program, Boolean(program), "fixed build should be executable"),
-        accountRow("ProgramData", ADDRESSES.programData, Boolean(programData), programDataSize ? programDataSize + " bytes" : "expected upgradeable loader account"),
+        accountRow("Program", ADDRESSES.program, Boolean(program), programLatest ? "latest claim-gated build live" : "upgrade pending before launch"),
+        accountRow("ProgramData", ADDRESSES.programData, Boolean(programData), programDataSize ? programDataSize + " bytes" + programHashNote : "expected upgradeable loader account"),
         accountRow("Config PDA", ADDRESSES.config, Boolean(config), config ? "launch config found" : "real init not sent"),
         accountRow("Pot authority", ADDRESSES.potAuthority, Boolean(potAuthority), potAuthority ? "system account exists" : "derived PDA only"),
         accountRow("TSLAx pot ATA", ADDRESSES.tslaxPotAta, Boolean(potAta), potAta ? "token account found" : "will exist after init/funding"),
@@ -1361,9 +1421,12 @@
         const labelX = reverse
           ? width - (width < 560 ? 126 : 86)
           : (width < 560 ? 76 : 86);
-        drawText(label, labelX, y - 34, width < 560 ? 12 : 13, "rgba(244,247,239,0.66)", "center");
+        const labelY = width < 560 && reverse ? y - 92 : y - 34;
+        if (!(width < 560 && reverse)) {
+          drawText(label, labelX, labelY, width < 560 ? 12 : 13, "rgba(244,247,239,0.66)", "center");
+        }
 
-        const active = app.mode === "story" || (app.accounts[ADDRESSES.config] && app.accounts[ADDRESSES.tslaxPotAta]);
+        const active = app.mode === "story" || (app.programDataMatchesLatest && app.accounts[ADDRESSES.config] && app.accounts[ADDRESSES.tslaxPotAta]);
         const count = active ? 11 : 5;
         for (let i = 0; i < count; i += 1) {
           const p = (i / count + t * (reverse ? -0.12 : 0.12)) % 1;
@@ -1385,9 +1448,10 @@
         const potExists = Boolean(app.accounts[ADDRESSES.tslaxPotAta]);
         const story = app.mode === "story";
         const configExists = Boolean(app.accounts[ADDRESSES.config]);
+        const compact = canvas.clientWidth < 560;
         const fill = potExists || story ? 0.52 + Math.sin(t * 2) * 0.04 : 0.04 + Math.sin(t * 1.4) * 0.015;
-        const w = 168;
-        const h = 190;
+        const w = compact ? 126 : 168;
+        const h = compact ? 152 : 190;
         const x = cx - w / 2;
         const y = cy - h / 2;
 
@@ -1421,14 +1485,14 @@
         ctx.fill();
         ctx.restore();
 
-        roundedRect(cx - 54, y + 6, 108, 32, 14);
+        roundedRect(cx - (compact ? 45 : 54), y + 6, compact ? 90 : 108, compact ? 28 : 32, 14);
         ctx.fillStyle = "#e8efe9";
         ctx.fill();
         ctx.fillStyle = "#0b0d12";
-        ctx.font = "900 14px Inter, system-ui, sans-serif";
+        ctx.font = "900 " + (compact ? 12 : 14) + "px Inter, system-ui, sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("TSLAx POT", cx, y + 22);
+        ctx.fillText("TSLAx POT", cx, y + (compact ? 20 : 22));
 
         const faceY = cy + 10 + Math.sin(t * 3) * 2;
         ctx.fillStyle = potExists || story ? "#07120e" : "rgba(244,247,239,0.58)";
@@ -1451,26 +1515,29 @@
       }
 
       function drawCore(cx, cy, t) {
-        const ready = Boolean(app.accounts[ADDRESSES.programData]);
+        const ready = Boolean(app.programDataMatchesLatest);
         const pulse = 1 + Math.sin(t * 4) * 0.08;
+        const compact = canvas.clientWidth < 560;
+        const outer = compact ? 58 : 76;
+        const inner = compact ? 35 : 45;
         ctx.save();
         ctx.translate(cx, cy);
         ctx.scale(pulse, pulse);
-        const core = ctx.createRadialGradient(0, 0, 8, 0, 0, 76);
+        const core = ctx.createRadialGradient(0, 0, 8, 0, 0, outer);
         core.addColorStop(0, ready ? "#f4fff8" : "#f4f7ef");
         core.addColorStop(0.28, ready ? "rgba(50,240,178,0.92)" : "rgba(255,210,90,0.72)");
         core.addColorStop(1, "rgba(50,240,178,0.04)");
         ctx.fillStyle = core;
         ctx.beginPath();
-        ctx.arc(0, 0, 76, 0, Math.PI * 2);
+        ctx.arc(0, 0, outer, 0, Math.PI * 2);
         ctx.fill();
         ctx.lineWidth = 2;
         ctx.strokeStyle = ready ? "rgba(50,240,178,0.86)" : "rgba(255,210,90,0.65)";
         ctx.beginPath();
-        ctx.arc(0, 0, 45, 0, Math.PI * 2);
+        ctx.arc(0, 0, inner, 0, Math.PI * 2);
         ctx.stroke();
-        drawText("PROGRAM", 0, -6, 13, "#07120e");
-        drawText("fixed build", 0, 13, 11, "rgba(7,18,14,0.78)");
+        drawText("PROGRAM", 0, -6, compact ? 11 : 13, "#07120e");
+        drawText(ready ? "ready" : "upgrade", 0, compact ? 11 : 13, compact ? 10 : 11, "rgba(7,18,14,0.78)");
         ctx.restore();
       }
 
@@ -1548,12 +1615,12 @@
         ctx.restore();
 
         drawWalletOrbit(cx, cy, t);
-        drawCore(cx - (tight ? Math.min(width * 0.22, 78) : Math.min(width * 0.18, 180)), cy - 6, t);
-        drawPot(cx + (tight ? Math.min(width * 0.22, 82) : Math.min(width * 0.17, 170)), cy + 8, t);
+        drawCore(cx - (tight ? Math.min(width * 0.24, 70) : Math.min(width * 0.18, 180)), cy - 6, t);
+        drawPot(cx + (tight ? Math.min(width * 0.24, 70) : Math.min(width * 0.17, 170)), cy + 8, t);
 
-        const caption = app.accounts[ADDRESSES.config]
-          ? "launch config live"
-          : "init not sent - dashboard is watching the gate";
+        const caption = app.programDataMatchesLatest
+          ? (app.accounts[ADDRESSES.config] ? "launch config live" : "init not sent - dashboard is watching the gate")
+          : "program upgrade pending - no pot funding";
         drawText(caption, cx, tight ? height - 28 : Math.max(108, height - 104), tight ? 12 : 14, "rgba(244,247,239,0.72)");
 
         requestAnimationFrame(draw);

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOCX On-chain Watch</title>
-  <meta name="description" content="STOCX on-chain dashboard for the Solana program, pot accounts, wallets, signatures, buys and sells.">
+  <title>STOCX / TSLAx Reward Watch</title>
+  <meta name="description" content="STOCX is a Solana arcade market paired with TSLAx. This dashboard watches the reward pot, launch proof, wallets, buys, sells, and program state.">
   <style>
     :root {
       color-scheme: dark;
@@ -212,6 +212,103 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin: 16px 0;
+    }
+
+    .brief {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 14px;
+      align-items: stretch;
+      margin: 16px 0 0;
+      min-width: 0;
+    }
+
+    .brief-main {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      background:
+        linear-gradient(90deg, rgba(50, 240, 178, 0.12), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 70%);
+      min-width: 0;
+    }
+
+    .brief-main h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.02;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .brief-main p {
+      max-width: 820px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.48;
+      overflow-wrap: anywhere;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .action-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 13px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 760;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .action-link.primary {
+      color: #06120d;
+      border-color: rgba(50, 240, 178, 0.28);
+      background: var(--mint);
+    }
+
+    .action-link.secondary {
+      background: rgba(53, 201, 255, 0.12);
+      border-color: rgba(53, 201, 255, 0.28);
+    }
+
+    .step-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .step {
+      min-height: 100%;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+      min-width: 0;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .step .micro {
+      line-height: 1.45;
+      overflow-wrap: anywhere;
     }
 
     .metric,
@@ -572,6 +669,7 @@
 
     @media (max-width: 1120px) {
       .layout,
+      .brief,
       .prep-grid,
       .lower-grid {
         grid-template-columns: 1fr;
@@ -593,7 +691,7 @@
       }
 
       .stage-shell {
-        order: 1;
+        order: 3;
       }
 
       .status-band {
@@ -601,19 +699,19 @@
       }
 
       .side-stack {
-        order: 4;
-      }
-
-      .prep-grid {
-        order: 3;
-      }
-
-      .lower-grid {
         order: 5;
       }
 
-      .footer-line {
+      .prep-grid {
+        order: 4;
+      }
+
+      .lower-grid {
         order: 6;
+      }
+
+      .footer-line {
+        order: 7;
       }
 
       .topbar {
@@ -625,7 +723,10 @@
         justify-content: flex-start;
       }
 
-      .status-band,
+      .status-band {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .legend,
       .side-stack {
         grid-template-columns: 1fr;
@@ -636,7 +737,7 @@
       }
 
       #chainStage {
-        height: 460px;
+        height: 360px;
       }
 
       .stage-head {
@@ -672,9 +773,12 @@
 
     @media (max-width: 520px) {
       .dashboard {
-        width: 100%;
+        width: min(100vw, 390px);
+        max-width: 100vw;
+        margin: 0;
         padding-left: 10px;
         padding-right: 10px;
+        overflow-x: hidden;
       }
 
       .brand {
@@ -693,14 +797,76 @@
 
       h1 {
         max-width: calc(100vw - 84px);
-        font-size: 28px;
+        font-size: 33px;
         line-height: 1;
+      }
+
+      .kicker {
+        font-size: 11px;
+      }
+
+      .brief {
+        gap: 10px;
+        margin-top: 12px;
+        max-width: calc(100vw - 20px);
+      }
+
+      .brief-main {
+        width: 100%;
+        max-width: calc(100vw - 20px);
+        padding: 12px 2px 14px;
+      }
+
+      .brief-main h2 {
+        max-width: calc(100vw - 24px);
+        font-size: 21px;
+        line-height: 1.08;
+      }
+
+      .brief-main p {
+        max-width: calc(100vw - 24px);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .quick-actions {
+        gap: 7px;
+      }
+
+      .action-link {
+        flex: 1 1 calc(50% - 7px);
+        min-width: 0;
+        min-height: 40px;
+        padding: 0 10px;
+      }
+
+      .step-strip {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+
+      .step {
+        padding: 10px;
+      }
+
+      .status-band {
+        gap: 8px;
+        grid-template-columns: 1fr;
+        max-width: calc(100vw - 20px);
+      }
+
+      .metric {
+        width: 100%;
+        max-width: calc(100vw - 20px);
+        min-height: 76px;
+        padding: 10px;
       }
 
       .metric-value {
         grid-template-columns: minmax(0, 1fr);
         align-items: center;
-        font-size: 24px;
+        font-size: 20px;
+        line-height: 1.06;
       }
 
       .metric-value .pill {
@@ -724,11 +890,11 @@
       .stage-head h2 {
         width: 100%;
         max-width: 100%;
-        font-size: 25px;
+        font-size: 21px;
       }
 
       #chainStage {
-        height: 390px;
+        height: 300px;
       }
 
       .mode-switch {
@@ -739,8 +905,19 @@
         min-width: 0;
       }
 
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .controls .mode-switch {
+        grid-column: 1 / -1;
+      }
+
+      .controls .text-button,
       .icon-button {
-        flex: 1;
+        width: 100%;
       }
     }
   </style>
@@ -752,7 +929,7 @@
         <div class="mark" aria-hidden="true">STX</div>
         <div class="brand-text">
           <p class="kicker">stocx.ratchetx.xyz / Solana mainnet-beta</p>
-          <h1>STOCX on-chain watch</h1>
+          <h1>STOCX</h1>
         </div>
       </div>
       <div class="controls" aria-label="Dashboard controls">
@@ -765,6 +942,38 @@
         <button id="refreshNow" class="icon-button" type="button" title="Refresh on-chain data" aria-label="Refresh on-chain data">R</button>
       </div>
     </header>
+
+    <section class="brief" aria-label="What STOCX is">
+      <div class="brief-main">
+        <p class="eyebrow">Solana arcade market paired with TSLAx</p>
+        <h2>Trade STOCX. Watch TSLAx rewards.</h2>
+        <p>STOCX is a pump.fun token quoted in tokenized Tesla stock. Fees route TSLAx into a reward pot, and the Etude program can pay TSLAx to wallets that submit a valid STOCX trade plus reward-record transaction.</p>
+        <div class="quick-actions" aria-label="Primary STOCX links">
+          <a class="action-link primary" href="https://pump.fun/coin/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE" target="_blank" rel="noreferrer">Open Pump</a>
+          <button id="copyCa" class="action-link" type="button">Copy CA</button>
+          <a class="action-link secondary" href="https://explorer.solana.com/address/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE?cluster=mainnet-beta" target="_blank" rel="noreferrer">CA Explorer</a>
+          <a class="action-link" href="#prepSection">Proof</a>
+        </div>
+      </div>
+      <div class="step-strip" aria-label="How STOCX works">
+        <div class="step">
+          <strong>1. Market</strong>
+          <p class="micro">STOCX trades on pump.fun against TSLAx, not SOL.</p>
+        </div>
+        <div class="step">
+          <strong>2. Pot</strong>
+          <p class="micro">66.33% of creator fee-share points at the game pot authority.</p>
+        </div>
+        <div class="step">
+          <strong>3. Reward</strong>
+          <p class="micro">The first trade+record proof is live; public one-tap reward UX is the next product step.</p>
+        </div>
+        <div class="step">
+          <strong>4. Try</strong>
+          <p class="micro">Open Pump, make a small trade, then refresh this page and watch the public accounts move.</p>
+        </div>
+      </div>
+    </section>
 
     <section class="status-band" aria-label="Primary on-chain state">
       <article class="metric">
@@ -990,6 +1199,7 @@
       manualGoList: document.getElementById("manualGoList"),
       potCallout: document.getElementById("potCallout"),
       copyPotAta: document.getElementById("copyPotAta"),
+      copyCa: document.getElementById("copyCa"),
       jumpPrep: document.getElementById("jumpPrep"),
       prepSection: document.getElementById("prepSection"),
       lastUpdated: document.getElementById("lastUpdated"),
@@ -1744,6 +1954,15 @@
         ui.copyPotAta.textContent = "Copied";
       } catch (error) {
         ui.lastUpdated.textContent = "Copy failed. Pot ATA: " + ADDRESSES.tslaxPotAta;
+      }
+    });
+
+    ui.copyCa.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(ADDRESSES.plannedGameMint);
+        ui.copyCa.textContent = "Copied";
+      } catch (error) {
+        ui.lastUpdated.textContent = "Copy failed. STOCX CA: " + ADDRESSES.plannedGameMint;
       }
     });
 

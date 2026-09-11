@@ -2,3 +2,4 @@
 {"term":"player builder","meaning":"No-keypair API that builds and measures unsigned STOCX reward transactions for a connected wallet; it must not sign or send.","first_seen":"2026-09-11T16:37:52+02:00"}
 {"term":"Solana Pay transaction request","meaning":"HTTPS wallet request format where a wallet POSTs its signer account and receives a base64 serialized Solana transaction to review, sign, and send.","first_seen":"2026-09-11T17:55:54+02:00"}
 {"term":"builder tunnel","meaning":"Temporary public HTTPS bridge from the STOCX dashboard or Solana Pay wallet to the local no-keypair reward transaction builder; useful for launch QA but not a permanent backend.","first_seen":"2026-09-11T19:27:00+02:00"}
+{"term":"proof target","meaning":"Small STOCX launch target where the wallet only needs enough post-swap TSLAx to send one v0+ALT Reward TX, separate from the larger lean pot-funding target.","first_seen":"2026-09-12T01:45:19+02:00"}

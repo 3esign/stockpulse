@@ -1117,7 +1117,7 @@
       <div class="brief-main">
         <p class="eyebrow">STOCX in one screen</p>
         <h2>A pump.fun token traded against tokenized Tesla stock.</h2>
-        <p>STOCX trades on the TSLAx pair. Players need TSLAx to enter the Reward TX path: one wallet signature buys STOCX with TSLAx, records proof on-chain, and can pay a TSLAx reward from the pot.</p>
+        <p>STOCX trades on the TSLAx pair. Players need TSLAx to enter the Reward TX path: one wallet signature buys STOCX with TSLAx, records proof on-chain, and pays a TSLAx reward from the pot when the gate passes.</p>
         <div class="signal-strip" aria-label="Core STOCX facts">
           <div class="signal">
             <b>Pair</b>
@@ -1132,8 +1132,8 @@
             <span>TSLAx from fees</span>
           </div>
           <div class="signal">
-            <b>Reward</b>
-            <span>TSLAx from pot</span>
+            <b>Proof</b>
+            <span>live on-chain</span>
           </div>
         </div>
         <div class="quick-actions" aria-label="Primary STOCX links">
@@ -1155,7 +1155,7 @@
         </div>
         <div class="step">
           <strong>3. Reward</strong>
-          <p class="micro">Reward TX builds one wallet-reviewed trade+record transaction when the builder is connected.</p>
+          <p class="micro">A mainnet Reward TX has already bought STOCX and paid TSLAx from the pot.</p>
         </div>
         <div class="step">
           <strong>4. Try</strong>
@@ -1168,7 +1168,7 @@
       <div class="player-copy">
         <p class="eyebrow">player path</p>
         <h2>One wallet signature: buy STOCX, record TSLAx reward.</h2>
-        <p>The proof trade is 1,000,000 STOCX or more. The current builder path fits the Solana packet with the live ALT; the wallet still needs TSLAx for the buy and a little SOL for rent and fees.</p>
+        <p>The proof trade is 1,000,000 STOCX or more. The deployed v0+ALT path has succeeded on mainnet; a public wallet still needs TSLAx for the buy and a little SOL for rent and fees.</p>
       </div>
       <div class="trade-widget">
         <div class="trade-actions" aria-label="Reward transaction actions">
@@ -1408,8 +1408,18 @@
         tone: "funds"
       },
       {
+        label: "Proof TSLAx swap",
+        signature: "5LGvTmQZx3mSbphXTNF5hscLtJbiFgSfJfgPg5e9MbkUVVBoaMwtaiDw7dFZEBTa66DU8yenRxzFWAmW8X4LkrBS",
+        tone: "funds"
+      },
+      {
         label: "First buy + activity",
         signature: "7kByA6JQ3msdndDQnsEsTrDw61Ew4QCSFjB2taj8qLwkcNYL3QMcL14GkEexQeQqDC1jLBiasn8E8ZHMaVwZTwA",
+        tone: "live"
+      },
+      {
+        label: "Reward proof paid",
+        signature: "55JkQShU72Vy2L3hzHgoZDRNLcTpBsFXrLr2d4trTDFPo6twoeurDN9zizRtvnHHDKVKSGuUrrjsZ7gwrRN1D9V9",
         tone: "live"
       }
     ];

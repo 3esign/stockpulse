@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STOCX / TSLAx Reward Watch</title>
   <meta name="description" content="STOCX is a Solana arcade market paired with TSLAx. This dashboard watches the reward pot, launch proof, wallets, buys, sells, and program state.">
+  <link rel="icon" href="/stocx-token.svg" type="image/svg+xml">
+  <meta property="og:title" content="STOCX / TSLAx Reward Watch">
+  <meta property="og:description" content="A Solana arcade market paired with tokenized Tesla stock: fees feed a TSLAx pot, reward actions buy STOCX and record proof on-chain.">
+  <meta property="og:image" content="https://stocx.ratchetx.xyz/stocx-token.svg">
   <style>
     :root {
       color-scheme: dark;
@@ -393,15 +397,31 @@
 
     .trade-actions {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
     }
 
-    .trade-actions button {
+    .trade-actions button,
+    .trade-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-height: 42px;
       padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #151a20;
+      color: var(--text);
       font-size: 13px;
       font-weight: 760;
+      text-align: center;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .trade-actions a:hover {
+      transform: translateY(-1px);
+      border-color: rgba(50, 240, 178, 0.7);
+      background: #1c232b;
     }
 
     .trade-actions .primary {
@@ -412,6 +432,16 @@
 
     .trade-actions .primary:disabled {
       color: var(--muted);
+      background: #151a20;
+    }
+
+    .trade-actions .disabled,
+    .trade-actions [aria-disabled="true"] {
+      pointer-events: none;
+      color: var(--muted);
+      cursor: wait;
+      transform: none;
+      opacity: 0.55;
       background: #151a20;
     }
 
@@ -1141,6 +1171,7 @@
           <button id="connectWallet" type="button">Connect</button>
           <button id="checkRewardTrade" type="button" disabled>Check</button>
           <button id="signRewardTrade" class="primary" type="button" disabled>Sign trade</button>
+          <a id="solanaPayLink" href="#playerTradeSection" aria-disabled="true">Wallet link</a>
         </div>
         <div class="trade-readout">
           <div class="state-row">
@@ -1422,6 +1453,7 @@
       connectWallet: document.getElementById("connectWallet"),
       checkRewardTrade: document.getElementById("checkRewardTrade"),
       signRewardTrade: document.getElementById("signRewardTrade"),
+      solanaPayLink: document.getElementById("solanaPayLink"),
       playerWalletText: document.getElementById("playerWalletText"),
       playerWalletBadge: document.getElementById("playerWalletBadge"),
       builderStatusText: document.getElementById("builderStatusText"),
@@ -1501,6 +1533,25 @@
       return true;
     }
 
+    function builderUrl() {
+      if (!BUILDER_ENDPOINT) return null;
+      try {
+        return new URL(BUILDER_ENDPOINT);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function solanaPayUrl() {
+      const endpoint = builderUrl();
+      if (!endpoint || endpoint.protocol !== "https:") return "";
+      const action = new URL("/api/stocx/pay", endpoint);
+      action.searchParams.set("baseAmountRaw", PLAYER_TRADE.baseAmountRaw);
+      action.searchParams.set("slippageBps", String(PLAYER_TRADE.slippageBps));
+      action.searchParams.set("side", String(PLAYER_TRADE.side));
+      return "solana:" + encodeURIComponent(action.toString());
+    }
+
     function shortAddress(value) {
       if (!value) return "missing";
       return value.slice(0, 6) + "..." + value.slice(-5);
@@ -1550,15 +1601,19 @@
     function accountDataBytes(account) {
       if (!account || !account.data || !Array.isArray(account.data)) return null;
       try {
-        const raw = atob(account.data[0]);
-        const bytes = new Uint8Array(raw.length);
-        for (let index = 0; index < raw.length; index += 1) {
-          bytes[index] = raw.charCodeAt(index);
-        }
-        return bytes;
+        return base64ToBytes(account.data[0]);
       } catch (error) {
         return null;
       }
+    }
+
+    function base64ToBytes(value) {
+      const raw = atob(value);
+      const bytes = new Uint8Array(raw.length);
+      for (let index = 0; index < raw.length; index += 1) {
+        bytes[index] = raw.charCodeAt(index);
+      }
+      return bytes;
     }
 
     function accountBytes(account) {
@@ -1678,9 +1733,34 @@
       }
     }
 
+    async function sendBuiltRewardTransaction(provider, built) {
+      const tx = built.transaction || {};
+      const sendOptions = tx.sendOptions || {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+        maxRetries: 3
+      };
+      const web3 = window.solanaWeb3 || window.SolanaWeb3 || null;
+
+      if (typeof provider.signAndSendTransaction === "function" && web3?.VersionedTransaction && tx.serializedBase64) {
+        const versioned = web3.VersionedTransaction.deserialize(base64ToBytes(tx.serializedBase64));
+        return provider.signAndSendTransaction(versioned, sendOptions);
+      }
+
+      const wire = tx.serializedBase58 || tx.message;
+      if (typeof provider.request === "function" && wire) {
+        return provider.request({
+          method: "signAndSendTransaction",
+          params: { message: wire, options: sendOptions }
+        });
+      }
+
+      throw new Error("Wallet can connect, but cannot sign this v0 transaction in this browser.");
+    }
+
     async function signRewardTrade() {
       const provider = app.walletProvider || findWalletProvider();
-      if (!provider || !provider.request) {
+      if (!provider || (typeof provider.request !== "function" && typeof provider.signAndSendTransaction !== "function")) {
         app.playerTrade = {
           gates: { ok: false, failures: ["Wallet signing API is unavailable."] }
         };
@@ -1691,14 +1771,11 @@
       try {
         const built = await callBuilder("build");
         app.playerTrade = built;
-        if (!built.transaction || !built.transaction.message) {
+        if (!built.transaction || (!built.transaction.serializedBase64 && !built.transaction.serializedBase58 && !built.transaction.message)) {
           const reason = built.gates?.failures?.[0] || "Builder did not return a signable transaction.";
           throw new Error(reason);
         }
-        const result = await provider.request({
-          method: "signAndSendTransaction",
-          params: { message: built.transaction.message }
-        });
+        const result = await sendBuiltRewardTransaction(provider, built);
         app.playerTradeSignature = String(result?.signature || result || "");
       } catch (error) {
         const previous = app.playerTrade || {};
@@ -1888,12 +1965,18 @@
       const price = trade?.price;
       const reward = trade?.expectedReward;
       const signerReady = Boolean(app.walletAddress && BUILDER_ENDPOINT && gateOk && packet?.fitsPacket);
+      const payUrl = solanaPayUrl();
+      const payReady = Boolean(payUrl && !app.playerTradeBusy);
+      const endpoint = builderUrl();
 
       ui.connectWallet.disabled = app.playerTradeBusy;
       ui.connectWallet.textContent = app.walletAddress ? shortAddress(app.walletAddress) : "Connect";
       ui.checkRewardTrade.disabled = app.playerTradeBusy || !app.walletAddress || !BUILDER_ENDPOINT;
       ui.signRewardTrade.disabled = app.playerTradeBusy || !signerReady;
       ui.signRewardTrade.textContent = app.playerTradeBusy ? "Working" : "Sign trade";
+      ui.solanaPayLink.href = payUrl || "#playerTradeSection";
+      ui.solanaPayLink.setAttribute("aria-disabled", payReady ? "false" : "true");
+      ui.solanaPayLink.classList.toggle("disabled", !payReady);
 
       ui.playerWalletText.textContent = app.walletAddress || "Not connected";
       ui.playerWalletBadge.textContent = app.walletAddress ? "ready" : "idle";
@@ -1920,8 +2003,9 @@
         ui.builderBadge.textContent = "blocked";
         ui.builderBadge.className = "pill bad";
       } else {
-        const endpointHost = new URL(BUILDER_ENDPOINT).host;
-        ui.builderStatusText.textContent = "Endpoint: " + endpointHost + ". Check wallet before signing.";
+        const endpointHost = endpoint ? endpoint.host : "builder";
+        const payNote = endpoint?.protocol === "https:" ? "Wallet link ready." : "Browser check only; wallet link needs HTTPS.";
+        ui.builderStatusText.textContent = "Endpoint: " + endpointHost + ". " + payNote;
         ui.builderBadge.textContent = "api";
         ui.builderBadge.className = "pill";
       }
@@ -2373,6 +2457,9 @@
     ui.connectWallet.addEventListener("click", connectPlayerWallet);
     ui.checkRewardTrade.addEventListener("click", checkRewardTrade);
     ui.signRewardTrade.addEventListener("click", signRewardTrade);
+    ui.solanaPayLink.addEventListener("click", (event) => {
+      if (ui.solanaPayLink.getAttribute("aria-disabled") === "true") event.preventDefault();
+    });
     ui.jumpPrep.addEventListener("click", () => {
       ui.prepSection.scrollIntoView({ behavior: app.paused ? "auto" : "smooth", block: "start" });
     });

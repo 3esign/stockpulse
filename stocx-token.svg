@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">STOCX TSLAx token mark</title>
+  <desc id="desc">A simple black, mint, and red token mark reading STOCX and TSLAx.</desc>
+  <rect width="1024" height="1024" rx="120" fill="#090a0e"/>
+  <path d="M132 222h760v174H132z" fill="#32f0b2"/>
+  <path d="M132 628h760v174H132z" fill="#ff5b5b"/>
+  <path d="M148 436h728v152H148z" fill="#f4f7ef"/>
+  <text x="512" y="346" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="156" font-weight="900" letter-spacing="0" fill="#090a0e">STOCX</text>
+  <text x="512" y="552" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="116" font-weight="900" letter-spacing="0" fill="#090a0e">TSLAx</text>
+  <text x="512" y="755" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="120" font-weight="900" letter-spacing="0" fill="#090a0e">POT</text>
+  <circle cx="190" cy="222" r="38" fill="#090a0e"/>
+  <circle cx="834" cy="802" r="38" fill="#090a0e"/>
+</svg>

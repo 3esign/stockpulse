@@ -1,2 +1,3 @@
 {"term":"trade+record","meaning":"One atomic STOCX transaction containing Pump buy_v2 or sell_v2 followed by Etude record_activity, required for TSLAx reward proof.","first_seen":"2026-09-11T16:37:52+02:00"}
 {"term":"player builder","meaning":"No-keypair API that builds and measures unsigned STOCX reward transactions for a connected wallet; it must not sign or send.","first_seen":"2026-09-11T16:37:52+02:00"}
+{"term":"Solana Pay transaction request","meaning":"HTTPS wallet request format where a wallet POSTs its signer account and receives a base64 serialized Solana transaction to review, sign, and send.","first_seen":"2026-09-11T17:55:54+02:00"}

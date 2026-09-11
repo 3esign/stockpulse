@@ -262,7 +262,7 @@
 
     .signal-strip {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
       margin: 12px 0 0;
       max-width: 860px;
@@ -1117,11 +1117,15 @@
       <div class="brief-main">
         <p class="eyebrow">STOCX in one screen</p>
         <h2>A pump.fun token traded against tokenized Tesla stock.</h2>
-        <p>STOCX trades on the TSLAx pair. Creator fees feed a TSLAx reward pot, and rewards need the special Reward TX path: one wallet signature that buys STOCX and records the proof on-chain.</p>
+        <p>STOCX trades on the TSLAx pair. Players need TSLAx to enter the Reward TX path: one wallet signature buys STOCX with TSLAx, records proof on-chain, and can pay a TSLAx reward from the pot.</p>
         <div class="signal-strip" aria-label="Core STOCX facts">
           <div class="signal">
             <b>Pair</b>
             <span>STOCX / TSLAx</span>
+          </div>
+          <div class="signal">
+            <b>Entry</b>
+            <span>TSLAx needed</span>
           </div>
           <div class="signal">
             <b>Pot</b>
@@ -1129,7 +1133,7 @@
           </div>
           <div class="signal">
             <b>Reward</b>
-            <span>Buy + record proof</span>
+            <span>TSLAx from pot</span>
           </div>
         </div>
         <div class="quick-actions" aria-label="Primary STOCX links">

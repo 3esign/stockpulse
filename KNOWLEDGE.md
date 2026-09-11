@@ -10,6 +10,7 @@
 - Solana Pay transaction requests are the cleaner mobile/public-wallet shape for this flow because the wallet posts its signer account and receives a base64 serialized transaction; it still requires an HTTPS builder endpoint.
 - `cloudflared tunnel --url` on this PC reads `%USERPROFILE%\.cloudflared\config.yml` by default; for a clean quick tunnel to the builder, pass an empty temp config with `--config C:\Svemir\data\brain\logs\stocx_cloudflared_empty.yml` or the request may hit the existing named-tunnel `http_status:404` fallback.
 - The deployer wallet is also gated right now: it has `0.00667911 TSLAx` and needs about `0.01123624 TSLAx` for the default 1,000,000 STOCX proof buy, so a ready signable reward transaction needs more TSLAx in the signing wallet.
+- Public copy must separate entry asset from reward asset: STOCX is TSLAx-quoted, so a player needs TSLAx to play the current Reward TX, and only then may receive TSLAx back from the pot.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`

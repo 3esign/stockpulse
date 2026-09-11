@@ -8,6 +8,8 @@
 - The live ALT `FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG` is enough for ordinary player wallets even though it was created during the deployer proof: user-specific ATAs, volume accumulator and activity PDA can stay static and the v0 packet is still 709 bytes.
 - A player wallet must have a TSLAx ATA with enough TSLAx for the proof buy; the builder should not return a signable transaction while that gate is red.
 - Solana Pay transaction requests are the cleaner mobile/public-wallet shape for this flow because the wallet posts its signer account and receives a base64 serialized transaction; it still requires an HTTPS builder endpoint.
+- `cloudflared tunnel --url` on this PC reads `%USERPROFILE%\.cloudflared\config.yml` by default; for a clean quick tunnel to the builder, pass an empty temp config with `--config C:\Svemir\data\brain\logs\stocx_cloudflared_empty.yml` or the request may hit the existing named-tunnel `http_status:404` fallback.
+- The deployer wallet is also gated right now: it has `0.00667911 TSLAx` and needs about `0.01123624 TSLAx` for the default 1,000,000 STOCX proof buy, so a ready signable reward transaction needs more TSLAx in the signing wallet.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -17,6 +19,7 @@
 ## Vestine
 - Use a backend builder for STOCX reward trades: frontend connects wallet, builder returns measured state, and only a green wallet/chain gate should expose a wallet-signable v0 transaction.
 - For public wallet requests, expose both app JSON (`/api/stocx/build`) and Solana Pay JSON (`/api/stocx/pay`) so extension browsers and mobile wallets have a path from the same no-keypair builder.
+- Keep public builder endpoints origin-limited and throttled because every build request performs live mainnet RPC reads.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.

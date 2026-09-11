@@ -1151,11 +1151,11 @@
         </div>
         <div class="step">
           <strong>3. Reward</strong>
-          <p class="micro">The first trade+record proof is live; public one-tap reward UX is the next product step.</p>
+          <p class="micro">Reward TX builds one wallet-reviewed trade+record transaction when the builder is connected.</p>
         </div>
         <div class="step">
           <strong>4. Try</strong>
-          <p class="micro">Open Pump, make a small TSLAx trade, then refresh. Pot rows can move; reward rows need the trade+record UX.</p>
+          <p class="micro">Use a wallet with TSLAx for Reward TX, or open Pump to watch ordinary market trades.</p>
         </div>
       </div>
     </section>
@@ -1184,7 +1184,7 @@
           <div class="state-row">
             <div class="state-main">
               <div class="account-role">Reward builder</div>
-              <div class="micro" id="builderStatusText">Public signer endpoint is not connected yet.</div>
+              <div class="micro" id="builderStatusText">Public reward builder endpoint is not connected yet.</div>
             </div>
             <span class="pill" id="builderBadge">local</span>
           </div>
@@ -1699,7 +1699,7 @@
 
     async function callBuilder(kind) {
       if (!BUILDER_ENDPOINT) {
-        throw new Error("Reward signer endpoint is not connected yet.");
+        throw new Error("Reward builder endpoint is not connected yet.");
       }
       if (!app.walletAddress) {
         throw new Error("Connect wallet first.");
@@ -1983,7 +1983,7 @@
       ui.playerWalletBadge.className = app.walletAddress ? "pill ok" : "pill warn";
 
       if (!BUILDER_ENDPOINT) {
-        ui.builderStatusText.textContent = "Public signer endpoint is not connected yet.";
+        ui.builderStatusText.textContent = "Public reward builder endpoint is not connected yet.";
         ui.builderBadge.textContent = "pending";
         ui.builderBadge.className = "pill warn";
       } else if (app.playerTradeBusy) {

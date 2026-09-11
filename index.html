@@ -867,6 +867,7 @@
     ];
     const EXPLORER = "https://explorer.solana.com/address/";
     const TX_EXPLORER = "https://explorer.solana.com/tx/";
+    const PUMP_COIN = "https://pump.fun/coin/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE";
     const ADDRESSES = {
       program: "GPYNqnB9h5PnsmajMYkhCSDrfQiXmgePR57QFwuG6eDH",
       programData: "5wrd4LMYWcAfUoCUgqK34g3HdAnd4E6DNNEn1VXT5Xb1",
@@ -880,6 +881,11 @@
     };
 
     const KNOWN_TXS = [
+      {
+        label: "STOCX token create",
+        signature: "5ZwJUg9dTQv3c7K3315b123XwQkiQiYy5DyZR5CGFp1nDYiC4ZgyGdJjPigK5PhRtQhcRKPuZWNbdFhHLWkokNSs",
+        tone: "launch"
+      },
       {
         label: "Top-up",
         signature: "3qkxE7wG7P6RCGYenq3rCBMYsA1u2PVAYjRXYY63ACFzgEvTPMxeYTgZ3R4jtdM6N4V7c7JkTprCeFdHHWz9Y1XC",
@@ -1202,6 +1208,7 @@
 
       ui.stateList.innerHTML = [
         row("Fixed build deployed", programData ? "yes" : "check", programData ? "ok" : "warn", "18,456-byte fixed STOCX Etude artifact is the expected live state."),
+        row("STOCX CA", app.accounts[ADDRESSES.plannedGameMint] ? "live" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : "warn", ADDRESSES.plannedGameMint),
         row("Launch config PDA", config ? "exists" : "empty", config ? "ok" : "warn", ADDRESSES.config),
         row("Pot authority PDA", potAuthority ? "exists" : "PDA only", potAuthority ? "ok" : "warn", ADDRESSES.potAuthority),
         row("TSLAx pot ATA", potAta ? "exists" : "empty", potAta ? "ok" : "warn", ADDRESSES.tslaxPotAta),
@@ -1229,10 +1236,11 @@
 
       ui.launchPrepList.innerHTML = [
         row("1. Program repair", programData ? "done" : "check", programData ? "ok" : "warn", "Fixed build is live before launch."),
-        row("2. Init config", config ? "done" : "needs go", config ? "ok" : "warn", "Creates config and TSLAx pot ATA. Not sent yet."),
-        row("3. ALT setup", "needs go", "warn", "30-address table, exact packet edge, warm one later slot."),
-        row("4. First buy + record", config && potAta ? "simulate" : "blocked", config && potAta ? "warn" : "bad", "Requires real TSLAx quote balance and warmed ALT."),
-        row("5. Site publish", "ready local", "warn", "Dashboard can publish after your explicit deploy confirmation.")
+        row("2. Token create", app.accounts[ADDRESSES.plannedGameMint] ? "done" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : "warn", "CA is live on pump.fun: " + ADDRESSES.plannedGameMint),
+        row("3. Init config", config ? "done" : "needs go", config ? "ok" : "warn", "Creates config and TSLAx pot ATA. Not sent yet."),
+        row("4. Fee sharing", "dry-run blocked", "warn", "TSLAx updateFeeSharesV2 needs one more isolated account-layout fix before locking."),
+        row("5. ALT setup", "needs go", "warn", "30-address table, exact packet edge, warm one later slot."),
+        row("6. First buy + record", config && potAta ? "simulate" : "blocked", config && potAta ? "warn" : "bad", "Requires real TSLAx quote balance and warmed ALT.")
       ].join("");
 
       const potReady = Boolean(potAta);
@@ -1281,7 +1289,17 @@
         accountRow("Config PDA", ADDRESSES.config, Boolean(config), config ? "launch config found" : "real init not sent"),
         accountRow("Pot authority", ADDRESSES.potAuthority, Boolean(potAuthority), potAuthority ? "system account exists" : "derived PDA only"),
         accountRow("TSLAx pot ATA", ADDRESSES.tslaxPotAta, Boolean(potAta), potAta ? "token account found" : "will exist after init/funding"),
-        accountRow("Planned STOCX mint", ADDRESSES.plannedGameMint, Boolean(app.accounts[ADDRESSES.plannedGameMint]), "pre-generated launch mint")
+        accountRow("STOCX CA", ADDRESSES.plannedGameMint, Boolean(app.accounts[ADDRESSES.plannedGameMint]), "live pump.fun token mint"),
+        `
+        <div class="account-row">
+          <div>
+            <div class="account-role">Pump page</div>
+            <div class="copy">${PUMP_COIN}</div>
+            <div class="micro">live STOCX trading surface</div>
+          </div>
+          <a class="link-chip" href="${PUMP_COIN}" target="_blank" rel="noreferrer">open</a>
+        </div>
+        `
       ].join("");
     }
 

@@ -256,6 +256,41 @@
       margin-top: 14px;
     }
 
+    .signal-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0 0;
+      max-width: 860px;
+    }
+
+    .signal {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid rgba(50, 240, 178, 0.14);
+      border-radius: var(--radius);
+      background: rgba(6, 18, 16, 0.42);
+    }
+
+    .signal b {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--mint);
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .signal span {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 760;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
     .action-link {
       display: inline-flex;
       align-items: center;
@@ -905,6 +940,15 @@
         line-height: 1.5;
       }
 
+      .signal-strip {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .signal {
+        padding: 9px 10px;
+      }
+
       .quick-actions {
         gap: 7px;
       }
@@ -1002,12 +1046,13 @@
 
       .controls {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1.35fr) minmax(64px, 0.72fr) 40px 40px;
         width: 100%;
+        gap: 6px;
       }
 
       .controls .mode-switch {
-        grid-column: 1 / -1;
+        grid-column: auto;
       }
 
       .controls .text-button,
@@ -1040,9 +1085,23 @@
 
     <section class="brief" aria-label="What STOCX is">
       <div class="brief-main">
-        <p class="eyebrow">Solana arcade market paired with TSLAx</p>
-        <h2>Trade STOCX. Watch TSLAx rewards.</h2>
-        <p>STOCX is a pump.fun token quoted in tokenized Tesla stock. Fees route TSLAx into a reward pot, and the Etude program can pay TSLAx to wallets that submit a valid STOCX trade plus reward-record transaction.</p>
+        <p class="eyebrow">STOCX in one screen</p>
+        <h2>A pump.fun token traded against tokenized Tesla stock.</h2>
+        <p>STOCX trades on the TSLAx pair. Creator fees feed a TSLAx reward pot, and rewards need the special Reward TX path: one wallet signature that buys STOCX and records the proof on-chain.</p>
+        <div class="signal-strip" aria-label="Core STOCX facts">
+          <div class="signal">
+            <b>Pair</b>
+            <span>STOCX / TSLAx</span>
+          </div>
+          <div class="signal">
+            <b>Pot</b>
+            <span>TSLAx from fees</span>
+          </div>
+          <div class="signal">
+            <b>Reward</b>
+            <span>Buy + record proof</span>
+          </div>
+        </div>
         <div class="quick-actions" aria-label="Primary STOCX links">
           <a class="action-link primary" href="https://pump.fun/coin/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE" target="_blank" rel="noreferrer">Open Pump</a>
           <button id="copyCa" class="action-link" type="button">Copy CA</button>

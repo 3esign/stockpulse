@@ -4,6 +4,7 @@
 - The first public reward text implied a player could buy on Pump and later refresh for rewards; the Etude program requires a same top-level transaction containing Pump `buy_v2`/`sell_v2` before `record_activity`, so the site now separates ordinary Pump trading from the reward transaction path.
 - First-render dashboard placeholders are product truth too: if RPC has not answered yet, the UI must say `Checking`, not stale pre-launch states such as `Not sent` or `Empty`.
 - A plain Porkbun CNAME from `builder.ratchetx.xyz` to `<tunnel-id>.cfargotunnel.com` is not enough for a public Cloudflare named-tunnel hostname: without Cloudflare managing/proxying the `ratchetx.xyz` zone, DNS resolves to the tunnel's internal IPv6/no public A path and browsers cannot reach the builder.
+- A live quick-tunnel URL is not proof that the reward builder is alive: if the local origin behind `127.0.0.1:8798` has stopped, Cloudflare can still answer while the browser sees `Failed to fetch` or a 502 path.
 
 ## Iskustva
 - The live ALT `FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG` is enough for ordinary player wallets even though it was created during the deployer proof: user-specific ATAs, volume accumulator and activity PDA can stay static and the v0 packet is still 709 bytes.
@@ -18,6 +19,8 @@
 - For a clean quick tunnel on this PC, pass an empty `--config` path; otherwise `cloudflared tunnel --url` can inherit the named-tunnel config and return a Cloudflare 404 before the request reaches the local builder.
 - A second `0.05 SOL` proof-target swap plus `0.014 TSLAx` transfer leaves Semir with enough quote token for one more Reward TX at the current measured cap of about `0.01127848 TSLAx`.
 - If the mobile page shows the wallet as ready but `Sign trade` stays disabled after `Check`, check which builder endpoint the static page selected; a non-live default endpoint can make the wallet path look connected while the build request never succeeds.
+- Reward builder selection should be recoverable, not singular: the static page should try query, local, production, and stored endpoints in order, then save the endpoint that actually returned a valid builder response.
+- Semir's second wallet Reward TX succeeded before the latest builder fix was committed: when activity shows `totalCalls=2`, the next `Check` should honestly block on low remaining TSLAx unless another top-up is sent.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -28,7 +31,9 @@
 - Semir-wallet Reward TX: `5gcApB2xEAP7rrVgyPc48Sx9g5semK2BYgg4sx8SoKUGkY25f5wLkdVoC4d6ymSKCzLRHmqfs9KcfQSE8dBXsg5p`.
 - Second Semir proof top-up swap: `5eAh2CCwt7RrbwvrTVfAMWm5rQbGFbd7GsGX4YNNs8GPJZ9L6E1V8D5H8E857424kffwRdEaw87Zv8KRTj7iTWTu`.
 - Second Semir TSLAx transfer: `3swRmk2AGtmyztTp87psvLdaNVJPpTtpd1nNWdyo2n1YcCfTbaM8VQFa3jRuhdGdVT9833eCKEfjDCC9iJdcpdhX`.
+- Second Semir-wallet Reward TX: `5LztMCajS8ADqRi3FBLoZY13UWBfYYJuuEdjcnNx7ioDLgPpYRY2RGJGDfUvQCJZuqf1Q8z8tGuVswi95NGWKx5X`.
 - Quick HTTPS builder QA: `https://wrote-photographer-unsigned-traditional.trycloudflare.com/health`, `/api/stocx/measure`, and `/api/stocx/build` returned 200 with `Access-Control-Allow-Origin: https://stocx.ratchetx.xyz`.
+- Restarted quick HTTPS builder QA: `http://127.0.0.1:8798/health`, `https://removed-confident-compatible-entertaining.trycloudflare.com/health`, and `/api/stocx/measure` from `Origin: https://stocx.ratchetx.xyz` returned 200 after the local builder was restarted.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 
@@ -36,9 +41,10 @@
 - Use a backend builder for STOCX reward trades: frontend connects wallet, builder returns measured state, and only a green wallet/chain gate should expose a wallet-signable v0 transaction.
 - For public wallet requests, expose both app JSON (`/api/stocx/build`) and Solana Pay JSON (`/api/stocx/pay`) so extension browsers and mobile wallets have a path from the same no-keypair builder.
 - Keep public builder endpoints origin-limited and throttled because every build request performs live mainnet RPC reads.
+- Keep at least one known-good fallback builder URL in the static dashboard while the branded `builder.ratchetx.xyz` route is not durable, and surface endpoint failures as builder failures rather than wallet failures.
 - Keep player top-ups in a separate guarded helper from pot funding: both are Token-2022 transfers, but their intended destinations and failure modes are different enough to deserve different scripts.
 - For launch QA, a temporary builder tunnel is enough to prove the full wallet path, but public launch should still use a branded stable builder endpoint.
-- The public dashboard should default to `https://builder.ratchetx.xyz` on the `stocx.ratchetx.xyz` hostname, with query/local overrides only for QA; otherwise old temporary tunnel URLs can survive in localStorage and make the public page lie.
+- The public dashboard should eventually default to `https://builder.ratchetx.xyz` on the `stocx.ratchetx.xyz` hostname, but until that branded runtime is healthy it should default to the current verified quick builder and keep query/local/stored fallbacks.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.

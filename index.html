@@ -1155,7 +1155,7 @@
         </div>
         <div class="step">
           <strong>3. Reward</strong>
-          <p class="micro">A mainnet Reward TX has already bought STOCX and paid TSLAx from the pot.</p>
+          <p class="micro">Mainnet Reward TXs have already bought STOCX and paid TSLAx from the pot.</p>
         </div>
         <div class="step">
           <strong>4. Try</strong>
@@ -1168,7 +1168,7 @@
       <div class="player-copy">
         <p class="eyebrow">player path</p>
         <h2>One wallet signature: buy STOCX, record TSLAx reward.</h2>
-        <p>The proof trade is 1,000,000 STOCX or more. The deployed v0+ALT path has succeeded on mainnet; a public wallet still needs TSLAx for the buy and a little SOL for rent and fees.</p>
+        <p>The proof trade is 1,000,000 STOCX or more. Semir's wallet has already completed this on mainnet; the next run needs enough TSLAx for the buy and a little SOL for rent and fees.</p>
       </div>
       <div class="trade-widget">
         <div class="trade-actions" aria-label="Reward transaction actions">
@@ -1350,11 +1350,17 @@
       ? "http://127.0.0.1:8798"
       : "";
     const PRODUCTION_BUILDER = window.location.hostname === "stocx.ratchetx.xyz"
-      ? "https://wrote-photographer-unsigned-traditional.trycloudflare.com"
+      ? "https://removed-confident-compatible-entertaining.trycloudflare.com"
       : "";
-    const BUILDER_ENDPOINT = normalizeBuilderEndpoint(
-      QUERY.get("builder") || LOCAL_BUILDER || PRODUCTION_BUILDER || readStoredValue("stocxBuilderEndpoint")
-    );
+    const BUILDER_ENDPOINTS = [
+      QUERY.get("builder"),
+      LOCAL_BUILDER,
+      PRODUCTION_BUILDER,
+      readStoredValue("stocxBuilderEndpoint")
+    ]
+      .map(normalizeBuilderEndpoint)
+      .filter((endpoint, index, list) => endpoint && list.indexOf(endpoint) === index);
+    const BUILDER_ENDPOINT = BUILDER_ENDPOINTS[0] || "";
     if (QUERY.get("builder") && BUILDER_ENDPOINT) {
       writeStoredValue("stocxBuilderEndpoint", BUILDER_ENDPOINT);
     }
@@ -1428,6 +1434,11 @@
       {
         label: "Semir wallet proof",
         signature: "5gcApB2xEAP7rrVgyPc48Sx9g5semK2BYgg4sx8SoKUGkY25f5wLkdVoC4d6ymSKCzLRHmqfs9KcfQSE8dBXsg5p",
+        tone: "live"
+      },
+      {
+        label: "Second Semir proof",
+        signature: "5LztMCajS8ADqRi3FBLoZY13UWBfYYJuuEdjcnNx7ioDLgPpYRY2RGJGDfUvQCJZuqf1Q8z8tGuVswi95NGWKx5X",
         tone: "live"
       }
     ];
@@ -1521,6 +1532,7 @@
       programDataMatchesLatest: false,
       walletProvider: null,
       walletAddress: "",
+      builderEndpoint: BUILDER_ENDPOINT,
       playerTrade: null,
       playerTradeSignature: "",
       playerTradeBusy: false,
@@ -1555,10 +1567,14 @@
       return true;
     }
 
-    function builderUrl() {
-      if (!BUILDER_ENDPOINT) return null;
+    function activeBuilderEndpoint() {
+      return app.builderEndpoint || BUILDER_ENDPOINTS[0] || "";
+    }
+
+    function builderUrl(endpoint = activeBuilderEndpoint()) {
+      if (!endpoint) return null;
       try {
-        return new URL(BUILDER_ENDPOINT);
+        return new URL(endpoint);
       } catch (error) {
         return null;
       }
@@ -1720,25 +1736,39 @@
     }
 
     async function callBuilder(kind) {
-      if (!BUILDER_ENDPOINT) {
+      const endpoints = [activeBuilderEndpoint()].concat(BUILDER_ENDPOINTS)
+        .filter((endpoint, index, list) => endpoint && list.indexOf(endpoint) === index);
+      if (!endpoints.length) {
         throw new Error("Reward builder endpoint is not connected yet.");
       }
       if (!app.walletAddress) {
         throw new Error("Connect wallet first.");
       }
-      const url = new URL("/api/stocx/" + kind, BUILDER_ENDPOINT);
-      url.searchParams.set("user", app.walletAddress);
-      url.searchParams.set("baseAmountRaw", PLAYER_TRADE.baseAmountRaw);
-      url.searchParams.set("slippageBps", String(PLAYER_TRADE.slippageBps));
-      url.searchParams.set("side", String(PLAYER_TRADE.side));
-      const response = await fetch(url.toString(), {
-        method: "GET",
-        cache: "no-store"
-      });
-      if (!response.ok) throw new Error("Builder HTTP " + response.status);
-      const payload = await response.json();
-      if (payload.error) throw new Error(payload.error);
-      return payload;
+      const failures = [];
+      for (const endpoint of endpoints) {
+        const url = new URL("/api/stocx/" + kind, endpoint);
+        url.searchParams.set("user", app.walletAddress);
+        url.searchParams.set("baseAmountRaw", PLAYER_TRADE.baseAmountRaw);
+        url.searchParams.set("slippageBps", String(PLAYER_TRADE.slippageBps));
+        url.searchParams.set("side", String(PLAYER_TRADE.side));
+        try {
+          const response = await fetch(url.toString(), {
+            method: "GET",
+            cache: "no-store"
+          });
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          const payload = await response.json();
+          if (payload.error) throw new Error(payload.error);
+          app.builderEndpoint = endpoint;
+          writeStoredValue("stocxBuilderEndpoint", endpoint);
+          return payload;
+        } catch (error) {
+          const host = builderUrl(endpoint)?.host || "builder";
+          const message = String(error.message || error || "unreachable");
+          failures.push(host + ": " + message);
+        }
+      }
+      throw new Error("Builder unreachable: " + failures.slice(0, 2).join("; "));
     }
 
     async function checkRewardTrade() {
@@ -1986,14 +2016,15 @@
       const packet = trade?.packet?.v0LiveAlt;
       const price = trade?.price;
       const reward = trade?.expectedReward;
-      const signerReady = Boolean(app.walletAddress && BUILDER_ENDPOINT && gateOk && packet?.fitsPacket);
+      const builderAvailable = Boolean(activeBuilderEndpoint());
+      const signerReady = Boolean(app.walletAddress && builderAvailable && gateOk && packet?.fitsPacket);
       const payUrl = solanaPayUrl();
-      const payReady = Boolean(payUrl && !app.playerTradeBusy);
+      const payReady = Boolean(payUrl && !app.playerTradeBusy && (!trade || gateOk));
       const endpoint = builderUrl();
 
       ui.connectWallet.disabled = app.playerTradeBusy;
       ui.connectWallet.textContent = app.walletAddress ? shortAddress(app.walletAddress) : "Connect";
-      ui.checkRewardTrade.disabled = app.playerTradeBusy || !app.walletAddress || !BUILDER_ENDPOINT;
+      ui.checkRewardTrade.disabled = app.playerTradeBusy || !app.walletAddress || !builderAvailable;
       ui.signRewardTrade.disabled = app.playerTradeBusy || !signerReady;
       ui.signRewardTrade.textContent = app.playerTradeBusy ? "Working" : "Sign trade";
       ui.solanaPayLink.href = payUrl || "#playerTradeSection";
@@ -2004,7 +2035,7 @@
       ui.playerWalletBadge.textContent = app.walletAddress ? "ready" : "idle";
       ui.playerWalletBadge.className = app.walletAddress ? "pill ok" : "pill warn";
 
-      if (!BUILDER_ENDPOINT) {
+      if (!builderAvailable) {
         ui.builderStatusText.textContent = "Public reward builder endpoint is not connected yet.";
         ui.builderBadge.textContent = "pending";
         ui.builderBadge.className = "pill warn";

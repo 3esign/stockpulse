@@ -1279,7 +1279,7 @@
       <article class="trust-card">
         <p class="eyebrow">final lock</p>
         <strong>Program immutable; ALT frozen.</strong>
-        <p class="micro">Upgrade authority is none and lookup-table authority is null on mainnet.</p>
+        <p class="micro">Upgrade authority is none and lookup-table authority is null. Lock txs: EYwg8...ivAsS / 2N5PQ...Q8jh.</p>
       </article>
     </section>
 
@@ -2297,13 +2297,15 @@
         state: sig.err ? "err" : "ok",
         sub: sig.blockTime ? new Date(sig.blockTime * 1000).toLocaleString() : "finalized signature"
       }));
-      const knownEvents = KNOWN_TXS.map((tx) => ({
+      const knownEvents = KNOWN_TXS.slice().reverse().map((tx) => ({
         label: tx.label,
         signature: tx.signature,
         state: tx.tone,
-        sub: tx.tone === "repair" ? "Known STOCX repair event" : "Known STOCX launch event"
+        sub: tx.tone === "repair"
+          ? "Known STOCX repair event"
+          : (tx.tone === "locked" ? "Known STOCX final-lock event" : "Known STOCX launch event")
       }));
-      ui.eventList.innerHTML = liveEvents.concat(knownEvents).slice(0, 12)
+      ui.eventList.innerHTML = knownEvents.concat(liveEvents).slice(0, 12)
         .map((event) => eventRow(event.label, event.signature, event.state, event.sub))
         .join("");
 

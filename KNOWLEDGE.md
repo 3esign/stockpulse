@@ -22,6 +22,7 @@
 - Reward builder selection should be recoverable, not singular: the static page should try query, local, production, and stored endpoints in order, then save the endpoint that actually returned a valid builder response.
 - Semir's second wallet Reward TX succeeded before the latest builder fix was committed: when activity shows `totalCalls=2`, the next `Check` should honestly block on low remaining TSLAx unless another top-up is sent.
 - The `proof` swap target can be falsely red for player top-ups because it measures launch-wallet post-swap readiness, not the player's post-transfer readiness; use a separate `semir-topup` target for small SOL -> TSLAx -> Semir refills.
+- A player can repeat the STOCX Reward TX after a TSLAx refill; the chain state moves the per-wallet activity PDA from `totalCalls=2` to `3`, then correctly blocks another same-size check on low TSLAx again.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -39,6 +40,8 @@
 - Third Semir TSLAx transfer: `3DGyDrcLbgWmdrVFmjPi1BSWiGr6Y4mNx172jMZVDCQxS4W7MsinwXo5TA9iN44XvHFcvyxT7Gt9qpv17toDZ9as`.
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG --include-base-ata auto` returned `OK: STOCX_PLAYER_TRADE_RECORD_READY` after the 0.03 SOL top-up route.
 - `https://removed-confident-compatible-entertaining.trycloudflare.com/api/stocx/measure` and `/api/stocx/build` returned 200 from `Origin: https://stocx.ratchetx.xyz`; `/build` returned a wallet-signable `699`-byte v0+ALT transaction.
+- Third Semir-wallet Reward TX: `3rYxoZXHSAwr7JC2QCkFECAGcwvdVwjYiWkM47K7fLJungGvbQnfCDmZv8axcRUufzGyoZ8Bp2mBkpXC4NH3CpSf`.
+- Post-third-proof readback: Semir TSLAx `0.00252951`, pot TSLAx `0.05995`, activity record `94GM...U87` at `totalCalls=3` / `totalEarnedRaw=3000`; the next check is again balance-gated by the current `0.01132096 TSLAx` quote cap.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 

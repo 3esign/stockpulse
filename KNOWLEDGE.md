@@ -17,6 +17,7 @@
 - The temporary HTTPS builder path produced a real Semir-wallet v0+ALT Reward TX: chain state proves wallet signer `HXFDa...C1HvM`, Pump `BuyV2`, and Etude `record_activity` in one transaction.
 - For a clean quick tunnel on this PC, pass an empty `--config` path; otherwise `cloudflared tunnel --url` can inherit the named-tunnel config and return a Cloudflare 404 before the request reaches the local builder.
 - A second `0.05 SOL` proof-target swap plus `0.014 TSLAx` transfer leaves Semir with enough quote token for one more Reward TX at the current measured cap of about `0.01127848 TSLAx`.
+- If the mobile page shows the wallet as ready but `Sign trade` stays disabled after `Check`, check which builder endpoint the static page selected; a non-live default endpoint can make the wallet path look connected while the build request never succeeds.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -45,3 +46,4 @@
 - Keep GitHub Pages as the readable dashboard, and require a separate HTTPS runtime for the reward builder instead of embedding a heavyweight wallet SDK into the static page.
 - Treat the temporary tunnel proof as successful QA, not final infrastructure; the production decision remains a stable `builder.ratchetx.xyz` runtime.
 - Keep `builder.ratchetx.xyz` as the intended branded endpoint, but do not treat the Porkbun-only CNAME as finished infrastructure; the immediate launch/test path is the explicit quick-builder URL and the durable path is Cloudflare-managed DNS or a deployed Worker/runtime.
+- Temporarily default production `stocx.ratchetx.xyz` to the verified quick builder so the public mobile `Check` button can work without Semir needing to preserve a long `builder=` query string.

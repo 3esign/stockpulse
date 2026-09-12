@@ -3,6 +3,7 @@
 ## Greske
 - The first public reward text implied a player could buy on Pump and later refresh for rewards; the Etude program requires a same top-level transaction containing Pump `buy_v2`/`sell_v2` before `record_activity`, so the site now separates ordinary Pump trading from the reward transaction path.
 - First-render dashboard placeholders are product truth too: if RPC has not answered yet, the UI must say `Checking`, not stale pre-launch states such as `Not sent` or `Empty`.
+- A plain Porkbun CNAME from `builder.ratchetx.xyz` to `<tunnel-id>.cfargotunnel.com` is not enough for a public Cloudflare named-tunnel hostname: without Cloudflare managing/proxying the `ratchetx.xyz` zone, DNS resolves to the tunnel's internal IPv6/no public A path and browsers cannot reach the builder.
 
 ## Iskustva
 - The live ALT `FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG` is enough for ordinary player wallets even though it was created during the deployer proof: user-specific ATAs, volume accumulator and activity PDA can stay static and the v0 packet is still 709 bytes.
@@ -14,6 +15,8 @@
 - Proof funding and lean funding are different gates: `--target proof` only needs enough post-swap TSLAx for one reward proof, while `--target lean` is for a larger launch/pot buffer.
 - Semir's wallet moved from missing-ATA to ready state after a bundled Token-2022 ATA creation plus `0.014 TSLAx` transfer; the next blocker is public wallet signing, not player quote balance.
 - The temporary HTTPS builder path produced a real Semir-wallet v0+ALT Reward TX: chain state proves wallet signer `HXFDa...C1HvM`, Pump `BuyV2`, and Etude `record_activity` in one transaction.
+- For a clean quick tunnel on this PC, pass an empty `--config` path; otherwise `cloudflared tunnel --url` can inherit the named-tunnel config and return a Cloudflare 404 before the request reaches the local builder.
+- A second `0.05 SOL` proof-target swap plus `0.014 TSLAx` transfer leaves Semir with enough quote token for one more Reward TX at the current measured cap of about `0.01127848 TSLAx`.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -22,6 +25,9 @@
 - `tools/solana-cli/scripts-scratch/stocx_tslax_swap.js swap --send --amount-lamports 50000000 --target proof` produced tx `56pyDbVf2ZM1kfvSj9EoF6ojNBhzMH8bAPPmkZ5RViCHfTsi9qiNmhxiQGUJxfMp3Z3Luwx1c57bZ9V58s4T3shW`.
 - `tools/solana-cli/scripts-scratch/stocx_tslax_send_to_semir.js send --send --amount-raw 1400000` produced tx `3VG5DY3MwzDWgHdrJ3aTK2dDw6WTSMfnGrvF79ESkubScu8eHEeJHB2EiPiPEX2nDPt1havCkZk4gy7hF6BBF88e`.
 - Semir-wallet Reward TX: `5gcApB2xEAP7rrVgyPc48Sx9g5semK2BYgg4sx8SoKUGkY25f5wLkdVoC4d6ymSKCzLRHmqfs9KcfQSE8dBXsg5p`.
+- Second Semir proof top-up swap: `5eAh2CCwt7RrbwvrTVfAMWm5rQbGFbd7GsGX4YNNs8GPJZ9L6E1V8D5H8E857424kffwRdEaw87Zv8KRTj7iTWTu`.
+- Second Semir TSLAx transfer: `3swRmk2AGtmyztTp87psvLdaNVJPpTtpd1nNWdyo2n1YcCfTbaM8VQFa3jRuhdGdVT9833eCKEfjDCC9iJdcpdhX`.
+- Quick HTTPS builder QA: `https://wrote-photographer-unsigned-traditional.trycloudflare.com/health`, `/api/stocx/measure`, and `/api/stocx/build` returned 200 with `Access-Control-Allow-Origin: https://stocx.ratchetx.xyz`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 
@@ -38,4 +44,4 @@
 - The first fold must carry the core mechanism before dashboard controls: `STOCX / TSLAx`, fee-fed TSLAx pot, and `buy + record proof` reward path.
 - Keep GitHub Pages as the readable dashboard, and require a separate HTTPS runtime for the reward builder instead of embedding a heavyweight wallet SDK into the static page.
 - Treat the temporary tunnel proof as successful QA, not final infrastructure; the production decision remains a stable `builder.ratchetx.xyz` runtime.
-- Use a Porkbun CNAME `builder` -> `71dbfdc0-3028-4c73-8586-95f34a02b6d1.cfargotunnel.com`; the existing local cloudflared ingress already maps `builder.ratchetx.xyz` to `127.0.0.1:8798`.
+- Keep `builder.ratchetx.xyz` as the intended branded endpoint, but do not treat the Porkbun-only CNAME as finished infrastructure; the immediate launch/test path is the explicit quick-builder URL and the durable path is Cloudflare-managed DNS or a deployed Worker/runtime.

@@ -7,6 +7,7 @@
 - A live quick-tunnel URL is not proof that the reward builder is alive: if the local origin behind `127.0.0.1:8798` has stopped, Cloudflare can still answer while the browser sees `Failed to fetch` or a 502 path.
 - A fixed `0.15 SOL` post-swap reserve guard became too strict after the V2 upgrade spend: the deployer wallet had `0.144882175 SOL`, so every proof swap would fail unless the reserve was deliberately parameterized.
 - The status helper's "expected artifact" labels became stale after the V2 deploy; guardrails must update expected local and padded hashes immediately after a successful program upgrade.
+- `stocx_tslax_send_to_semir.js` currently prints a misleading `after.transfer.requestedRaw` when it re-runs status after send; trust the signature and before/after token balances until that cosmetic report bug is patched.
 
 ## Iskustva
 - The live ALT `FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG` is enough for ordinary player wallets even though it was created during the deployer proof: user-specific ATAs, volume accumulator and activity PDA can stay static and the v0 packet is still 709 bytes.
@@ -32,6 +33,7 @@
 - V2 `buy_and_reward` is now more than a candidate: a mainnet proof shows one top-level Etude instruction can CPI-call Pump `BuyV2` and then pay TSLAx in the same call.
 - A small proof swap should use an explicit low reserve only when the following proof transaction is already sized and simulated; keep the default reserve guard conservative for normal funding.
 - Quick tunnels are launch bridges, not durable infrastructure: on 2026-09-12 the previous `removed-confident-compatible-entertaining.trycloudflare.com` hostname no longer resolved, so the dashboard had to move to a fresh V2 tunnel.
+- A `0.04 SOL` Semir top-up can refill one more V2 player run by swapping ExactIn to TSLAx, keeping a `0.10 SOL` launch-wallet reserve, and forwarding `0.010 TSLAx`; after this route Semir measured `0.01252951 TSLAx` against a current cap of `0.01134229 TSLAx`.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -61,6 +63,9 @@
 - `tools/solana-cli/scripts-scratch/stocx_v2_proof_sender.js send --send` produced V2 proof tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`.
 - Post-V2-proof readback: Etude top-level, Pump `BuyV2` as CPI, deployer STOCX `3,000,000`, deployer TSLAx `0.00133745`, pot TSLAx `0.05994`, deployer activity `EUuE...ZTg` at `totalCalls=3` / `totalEarnedRaw=3000`.
 - Fresh V2 quick builder: `https://exhaust-relaxation-compiled-martha.trycloudflare.com` returned health 200, `/actions.json` 200, and `/api/stocx/measure` in `mode: v2`; Semir wallet readback showed `0.00252951 TSLAx` against a current need of `0.01134229 TSLAx`.
+- Fourth Semir proof top-up swap: `2YkvsphG44rTWUbDiT22aGB52u3eFmdR5p1MHSsZBQ5AeqXsBGDqso6hvHyafUscFHz445eVuMuiD9H8qTjQAPZN`.
+- Fourth Semir TSLAx transfer: `2rLjZg8gLvJSjq6LXVyjLS71Y6XGpPXrzRpw3bP66zBuwGQA1dRksbnYX6WfPxunf6Y3xSydNMvgn2wkSxU5CGDN`.
+- Post-fourth-top-up V2 builder measurement: `https://exhaust-relaxation-compiled-martha.trycloudflare.com/api/stocx/measure` returned `OK: STOCX_PLAYER_BUY_AND_REWARD_READY`, Semir TSLAx `0.01252951`, current quote cap `0.01134229`, live ALT size `665` bytes / `567` bytes headroom, pot `0.05994 TSLAx`, and activity record `totalCalls=3` / `totalEarnedRaw=3000`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.
@@ -79,6 +84,7 @@
 - Use `stocx_v2_proof_sender.js simulate` before `send --send`; it rebuilds a fresh unsigned V2 transaction, signs locally, and prints simulation logs before any send.
 - Keep `--min-reserve-lamports` explicit on proof-only swaps so the command output states exactly which SOL reserve was accepted.
 - For temporary public testing after the V2 upgrade, run the builder with `STOCX_BUILDER_MODE=v2` and `STOCX_ENABLE_V2_BUILD=1`; health, `/actions.json`, and `/api/stocx/measure` should all be checked through the tunnel before updating the static site.
+- For player refills from a small SOL top-up, run `stocx_tslax_send_to_semir.js status --amount-raw <raw>` before send so the default `0.014 TSLAx` transfer amount cannot accidentally exceed the launch wallet's post-swap TSLAx balance.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.

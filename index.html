@@ -1205,7 +1205,7 @@
         </div>
         <div class="step">
           <strong>3. Reward</strong>
-          <p class="micro">Three mainnet Reward TXs have already bought STOCX and paid TSLAx from the pot.</p>
+          <p class="micro">Mainnet Reward TXs have already bought STOCX and paid TSLAx; the latest V2 proof uses one Etude call.</p>
         </div>
         <div class="step">
           <strong>4. Try</strong>
@@ -1218,7 +1218,7 @@
       <div class="player-copy">
         <p class="eyebrow">player path</p>
         <h2>One wallet signature: buy STOCX, record TSLAx reward.</h2>
-        <p>The proof trade is 1,000,000 STOCX or more. Semir's wallet has completed this three times on mainnet; each next run needs enough TSLAx for the buy and a little SOL for rent and fees.</p>
+        <p>The proof trade is 1,000,000 STOCX or more. Semir's wallet has completed this three times on mainnet; the launch wallet has also proved the V2 one-call path. Each next run needs enough TSLAx for the buy and a little SOL for fees.</p>
       </div>
       <div class="trade-widget">
         <div class="trade-actions" aria-label="Reward transaction actions">
@@ -1263,8 +1263,8 @@
     <section class="trust-strip" id="trustSection" aria-label="STOCX trust status">
       <article class="trust-card">
         <p class="eyebrow">on-chain rule</p>
-        <strong>Pump trade plus Etude proof.</strong>
-        <p class="micro">Reward TX must include a real STOCX/TSLAx Pump trade before Etude pays TSLAx.</p>
+        <strong>One Etude call can do it.</strong>
+        <p class="micro">The V2 path CPI-calls Pump BuyV2, then pays TSLAx only after the trade succeeds.</p>
       </article>
       <article class="trust-card">
         <p class="eyebrow">fee path</p>
@@ -1279,7 +1279,7 @@
       <article class="trust-card warning">
         <p class="eyebrow">final lock</p>
         <strong>Program and ALT not frozen yet.</strong>
-        <p class="micro">V1 works now; V2 on-chain wrapper is measured before irreversible revocation.</p>
+        <p class="micro">V2 is live and proofed; irreversible revocation still waits for a final go.</p>
       </article>
     </section>
 
@@ -1287,7 +1287,7 @@
       <article class="metric">
         <p class="label">Program integrity</p>
         <div class="metric-value"><span id="metricProgram">Checking</span><span id="badgeProgram" class="pill">RPC</span></div>
-        <p class="micro" id="programSub">Claim-gated build matched against ProgramData.</p>
+        <p class="micro" id="programSub">V2 buy_and_reward build matched against ProgramData.</p>
       </article>
       <article class="metric">
         <p class="label">Launch config</p>
@@ -1460,7 +1460,7 @@
         tone: "repair"
       },
       {
-        label: "Claim-gated upgrade",
+        label: "V1 claim-gated upgrade",
         signature: "5tdDhDnawJiphiNAVZPntp5JPSy1sKu3bHTzZDaxi32C5PvJJi7hFCu5k1b8YAnQDzAX7TTgDUqpGUJNmxpTFuHa",
         tone: "upgrade"
       },
@@ -1518,14 +1518,24 @@
         label: "Third Semir proof",
         signature: "3rYxoZXHSAwr7JC2QCkFECAGcwvdVwjYiWkM47K7fLJungGvbQnfCDmZv8axcRUufzGyoZ8Bp2mBkpXC4NH3CpSf",
         tone: "live"
+      },
+      {
+        label: "V2 program upgrade",
+        signature: "4Sg7yFa7acon3FhU7uquGdi9dd2HFixNfq8VbXactfHMWeSniu483NgAmNVNGSutxPibFc3UM5g5SprjRqY8LfJ8",
+        tone: "upgrade"
+      },
+      {
+        label: "V2 buy_and_reward proof",
+        signature: "3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm",
+        tone: "live"
       }
     ];
 
     const PROGRAM_INTEGRITY = {
-      expectedElfBytes: 19136,
-      programDataElfZoneBytes: 24536,
-      expectedLocalSha256: "B7073104B7E5B7C57CD0FD8FC00B655F7FD345F1870FB736512590A535D2398C",
-      expectedPaddedSha256: "D1C5AD3AA737BD411539345577952F84217FDA92E455D5210EFE61CEE680D251"
+      expectedElfBytes: 24768,
+      programDataElfZoneBytes: 34776,
+      expectedLocalSha256: "F48D2AF932AB50E000968E67F631B1ED8D31028068CE57574B59B7A2E2201D88",
+      expectedPaddedSha256: "2DF6FCB0FD6D1BEF7A28D539F4D29D9DEC884DCA64F93D8431CA2655D9DCF62E"
     };
 
     const ui = {
@@ -2177,7 +2187,7 @@
       const pulseCount = Math.max(KNOWN_TXS.length, app.signatures.length);
 
       ui.metricProgram.textContent = !hasAccountRead ? "Checking" : (programLatest ? "Live" : (programSeen ? "Upgrade pending" : "Watching"));
-      ui.badgeProgram.textContent = !hasAccountRead ? "RPC" : (programLatest ? "19,136 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet"));
+      ui.badgeProgram.textContent = !hasAccountRead ? "RPC" : (programLatest ? "24,768 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet"));
       ui.badgeProgram.className = !hasAccountRead ? "pill" : (programLatest ? "pill ok" : "pill warn");
       ui.programSub.textContent = shortAddress(ADDRESSES.program) + " / target " + PROGRAM_INTEGRITY.expectedLocalSha256.slice(0, 8) + programHashNote;
 
@@ -2197,7 +2207,7 @@
       ui.pulseSub.textContent = app.signatures.length ? "Recent program signatures include the launch proof." : "Showing known launch txs while RPC signatures load.";
 
       ui.stateList.innerHTML = [
-        row("Latest reward build", programLatest ? "live" : (!hasAccountRead ? "checking" : "upgrade pending"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "19,136-byte claim-gated artifact matches the padded ProgramData hash."),
+        row("Latest reward build", programLatest ? "live" : (!hasAccountRead ? "checking" : "upgrade pending"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "24,768-byte V2 buy_and_reward artifact matches the padded ProgramData hash."),
         row("STOCX CA", app.accounts[ADDRESSES.plannedGameMint] ? "live" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.plannedGameMint),
         row("Fee-share split", "locked", "ok", "66.33% pot authority / 33.67% Semir wallet, admin revoked."),
         row("Launch config PDA", config ? "exists" : (!hasAccountRead ? "checking" : "empty"), config ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.config),
@@ -2228,7 +2238,7 @@
       ].join("");
 
       ui.launchPrepList.innerHTML = [
-        row("1. Program upgrade", programLatest ? "done" : (!hasAccountRead ? "checking" : "needs go"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Claim-gated 19,136-byte build is live on ProgramData."),
+        row("1. Program upgrade", programLatest ? "done" : (!hasAccountRead ? "checking" : "needs go"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "V2 24,768-byte build is live on ProgramData."),
         row("2. Token create", app.accounts[ADDRESSES.plannedGameMint] ? "done" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : (!hasAccountRead ? "idle" : "warn"), "CA is live on pump.fun: " + ADDRESSES.plannedGameMint),
         row("3. Fee sharing", "done", "ok", "Locked on-chain; pot authority is the primary shareholder."),
         row("4. Init config", config ? "done" : (!hasAccountRead ? "checking" : "needs go"), config ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Config and pot ATA are initialized on mainnet."),
@@ -2255,7 +2265,7 @@
       ].join("");
 
       ui.manualGoList.innerHTML = [
-        row("Launch status", app.activityRecordSummary ? "successful" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Upgrade, init, ALT, TSLAx swap, pot fund and reward proof have known finalized signatures."),
+        row("Launch status", app.activityRecordSummary ? "successful" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Upgrade, init, ALT, TSLAx swap, pot fund, V1 proofs and V2 proof have known finalized signatures."),
         row("SOL deployer reserve", deployer ? sol(deployer.lamports) : "reading", deployer ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Kept for maintenance and future guarded transactions."),
         row("TSLAx launch balance", app.deployerTslaxAmount || "reading", app.deployerTslaxAmount ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Leftover quote token after pot fund and first buy."),
         row("Activity record", app.activityRecordSummary ? app.activityRecordSummary.totalCalls + " call" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), app.activityRecordSummary ? app.activityRecordSummary.totalEarned + " earned, last " + app.activityRecordSummary.lastSide + " at " + app.activityRecordSummary.lastSeen : ADDRESSES.activityRecord)
@@ -2278,7 +2288,7 @@
         .join("");
 
       ui.accountList.innerHTML = [
-        accountRow("Program", ADDRESSES.program, Boolean(program), programLatest ? "latest claim-gated build live" : "program hash not verified"),
+        accountRow("Program", ADDRESSES.program, Boolean(program), programLatest ? "latest V2 build live" : "program hash not verified"),
         accountRow("ProgramData", ADDRESSES.programData, Boolean(programData), programDataSize ? programDataSize + " bytes" + programHashNote : "expected upgradeable loader account"),
         accountRow("Config PDA", ADDRESSES.config, Boolean(config), config ? "launch config found" : "config missing"),
         accountRow("Pot authority", ADDRESSES.potAuthority, Boolean(potAuthority), potAuthority ? "system account exists" : "derived PDA only"),
@@ -2286,7 +2296,7 @@
         accountRow("STOCX CA", ADDRESSES.plannedGameMint, Boolean(app.accounts[ADDRESSES.plannedGameMint]), "live pump.fun token mint"),
         accountRow("STOCX deployer ATA", ADDRESSES.deployerStocxAta, Boolean(app.accounts[ADDRESSES.deployerStocxAta]), app.deployerStocxAmount || "proof account"),
         accountRow("Activity record", ADDRESSES.activityRecord, Boolean(app.accounts[ADDRESSES.activityRecord]), app.activityRecordSummary ? app.activityRecordSummary.totalEarned + " paid from pot" : "per-wallet reward state"),
-        accountRow("ALT", ADDRESSES.lookupTable, Boolean(app.accounts[ADDRESSES.lookupTable]), "24-address v0 lookup table for the first-buy packet"),
+        accountRow("ALT", ADDRESSES.lookupTable, Boolean(app.accounts[ADDRESSES.lookupTable]), "24-address v0 lookup table for Reward TX packets"),
         `
         <div class="account-row">
           <div>

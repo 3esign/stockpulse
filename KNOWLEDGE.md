@@ -5,6 +5,8 @@
 - First-render dashboard placeholders are product truth too: if RPC has not answered yet, the UI must say `Checking`, not stale pre-launch states such as `Not sent` or `Empty`.
 - A plain Porkbun CNAME from `builder.ratchetx.xyz` to `<tunnel-id>.cfargotunnel.com` is not enough for a public Cloudflare named-tunnel hostname: without Cloudflare managing/proxying the `ratchetx.xyz` zone, DNS resolves to the tunnel's internal IPv6/no public A path and browsers cannot reach the builder.
 - A live quick-tunnel URL is not proof that the reward builder is alive: if the local origin behind `127.0.0.1:8798` has stopped, Cloudflare can still answer while the browser sees `Failed to fetch` or a 502 path.
+- A fixed `0.15 SOL` post-swap reserve guard became too strict after the V2 upgrade spend: the deployer wallet had `0.144882175 SOL`, so every proof swap would fail unless the reserve was deliberately parameterized.
+- The status helper's "expected artifact" labels became stale after the V2 deploy; guardrails must update expected local and padded hashes immediately after a successful program upgrade.
 
 ## Iskustva
 - The live ALT `FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG` is enough for ordinary player wallets even though it was created during the deployer proof: user-specific ATAs, volume accumulator and activity PDA can stay static and the v0 packet is still 709 bytes.
@@ -26,6 +28,9 @@
 - "On-chain builder" is not an HTTP service on Solana; the real V2 shape is an Etude `buy_and_reward` instruction that CPI-calls Pump and then pays locally, while the current public builder remains off-chain and no-keypair.
 - A synthetic `buy_and_reward` wrapper has packet room: using today's Pump account set, one Etude instruction with 31 accounts measured `1204` bytes as legacy and `651` bytes through the live ALT, so the idea is feasible enough to test but not safe to mainnet-upgrade without LiteSVM coverage.
 - A public Action mapping is only real if both sides pass CORS: root `actions.json` and the target builder endpoint must answer `Access-Control-Allow-Origin: *`, otherwise Action-aware clients can discover the route and still fail before signing.
+- V2 builder support should stay safe-gated even after the live upgrade: `mode=v2` may measure freely, but must not return a wallet-signable V2 transaction unless the operator deliberately sets `STOCX_ENABLE_V2_BUILD=1`.
+- V2 `buy_and_reward` is now more than a candidate: a mainnet proof shows one top-level Etude instruction can CPI-call Pump `BuyV2` and then pay TSLAx in the same call.
+- A small proof swap should use an explicit low reserve only when the following proof transaction is already sized and simulated; keep the default reserve guard conservative for normal funding.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -48,6 +53,12 @@
 - Public builder package: `builder/stocx-player-builder.js`, `builder/package.json`, and `builder/README.md`; it removes local Svemir imports and exposes `/health`, `/api/stocx/measure`, `/api/stocx/build`, `/api/stocx/pay`, and `/actions.json`.
 - Synthetic V2 wrapper measurement, no-send, 2026-09-12: one top-level Etude `buy_and_reward` instruction that would CPI into Pump measured `1204` bytes legacy with `28` bytes headroom, `1206` bytes v0 without lookup, `496` bytes synthetic full lookup, and `651` bytes with live ALT `FfP2...SJG`.
 - Live Actions route QA after restart: `https://stocx.ratchetx.xyz/actions.json`, `https://removed-confident-compatible-entertaining.trycloudflare.com/actions.json`, and `https://removed-confident-compatible-entertaining.trycloudflare.com/api/stocx/pay` returned 200 with `Access-Control-Allow-Origin: *`.
+- V2 public-builder measurement, no-send, 2026-09-12: `mode=v2` produced `compute_limit + priority_fee + buy_and_reward`, `buy_and_reward` has 40 accounts and 29 data bytes, live ALT transaction size is `665` bytes with `567` bytes headroom, and output is correctly blocked by low Semir TSLAx plus the V2 enable guard.
+- V1 public-builder regression, no-send, 2026-09-12: `mode=v1` still measures `709` bytes through the live ALT with `523` bytes headroom and is blocked only by Semir's current low TSLAx balance.
+- V2 program upgrade: `4Sg7yFa7acon3FhU7uquGdi9dd2HFixNfq8VbXactfHMWeSniu483NgAmNVNGSutxPibFc3UM5g5SprjRqY8LfJ8`.
+- V2 proof funding swap: `3cRedt9sV9fLVU8doiQ4hgcS73a8BgjthKBkdF7K5TyCLDK6y3KjnxT9QzbxRAU2QzvafVaaicU2Zjg54yE72wQC`.
+- `tools/solana-cli/scripts-scratch/stocx_v2_proof_sender.js send --send` produced V2 proof tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`.
+- Post-V2-proof readback: Etude top-level, Pump `BuyV2` as CPI, deployer STOCX `3,000,000`, deployer TSLAx `0.00133745`, pot TSLAx `0.05994`, deployer activity `EUuE...ZTg` at `totalCalls=3` / `totalEarnedRaw=3000`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.
@@ -62,6 +73,9 @@
 - For launch QA, a temporary builder tunnel is enough to prove the full wallet path, but public launch should still use a branded stable builder endpoint.
 - The public dashboard should eventually default to `https://builder.ratchetx.xyz` on the `stocx.ratchetx.xyz` hostname, but until that branded runtime is healthy it should default to the current verified quick builder and keep query/local/stored fallbacks.
 - Keep V1 live while packaging the public builder; do not revoke program or ALT authority until Semir chooses between freezing V1 now and spending one more upgrade cycle on the tested V2 CPI wrapper.
+- Add experimental builder modes behind explicit flags when the live program does not yet support them; a public no-keypair builder must fail closed rather than hand wallets transactions known to target an undeployed instruction.
+- Use `stocx_v2_proof_sender.js simulate` before `send --send`; it rebuilds a fresh unsigned V2 transaction, signs locally, and prints simulation logs before any send.
+- Keep `--min-reserve-lamports` explicit on proof-only swaps so the command output states exactly which SOL reserve was accepted.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.
@@ -70,3 +84,5 @@
 - Treat the temporary tunnel proof as successful QA, not final infrastructure; the production decision remains a stable `builder.ratchetx.xyz` runtime.
 - Keep `builder.ratchetx.xyz` as the intended branded endpoint, but do not treat the Porkbun-only CNAME as finished infrastructure; the immediate launch/test path is the explicit quick-builder URL and the durable path is Cloudflare-managed DNS or a deployed Worker/runtime.
 - Temporarily default production `stocx.ratchetx.xyz` to the verified quick builder so the public mobile `Check` button can work without Semir needing to preserve a long `builder=` query string.
+- Keep `v1` as the public builder default until a stable hosted builder endpoint is configured for V2 and monitored; V2 can already be served by an operator with `STOCX_ENABLE_V2_BUILD=1`.
+- V2 is now the preferred on-chain reward shape after proof; keep public builders operator-gated with `STOCX_ENABLE_V2_BUILD=1` until a stable hosted endpoint is configured and watched.

@@ -1,6 +1,6 @@
 # STOCX Trust Status
 
-STOCX v1 is live on Solana mainnet. The game rule is enforced by the Etude program: a wallet transaction must contain a real Pump `buy_v2` or `sell_v2` for STOCX/TSLAx before `record_activity` pays a TSLAx reward from the pot.
+STOCX V2 is live on Solana mainnet. The clean game rule is enforced by the Etude program: one `buy_and_reward` call CPI-calls Pump `buy_v2` for STOCX/TSLAx, then pays a TSLAx reward from the pot only after the trade succeeds. The older V1 top-level `buy_v2 + record_activity` path remains present for compatibility.
 
 ## On-Chain Now
 
@@ -25,7 +25,7 @@ https://stocx.ratchetx.xyz/?builder=https://your-builder.example
 
 ## Final Lock Gate
 
-Two remaining authorities should be frozen only after the final v1/v2 decision:
+Two remaining authorities should be frozen only after the final immutable-launch decision:
 
 ```text
 solana address-lookup-table freeze FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG --authority <UPGRADE_AUTHORITY_KEYPAIR> --url https://api.mainnet-beta.solana.com --bypass-warning
@@ -34,8 +34,10 @@ solana program set-upgrade-authority GPYNqnB9h5PnsmajMYkhCSDrfQiXmgePR57QFwuG6eD
 
 Do not run those commands until the program is meant to be immutable forever.
 
-## V2 Candidate
+## V2 Proof
 
-A measured next on-chain improvement is a new Etude `buy_and_reward` instruction: the user signs one Etude instruction, Etude CPI-calls Pump `buy_v2`, then pays the TSLAx reward from the pot. A no-send packet estimate on 2026-09-12 was `1204` bytes legacy with `28` bytes headroom, and `651` bytes with the live ALT.
+The V2 Etude `buy_and_reward` instruction was upgraded on mainnet in tx `4Sg7yFa7acon3FhU7uquGdi9dd2HFixNfq8VbXactfHMWeSniu483NgAmNVNGSutxPibFc3UM5g5SprjRqY8LfJ8`.
 
-That upgrade would make the on-chain path cleaner, but it needs new LiteSVM tests and a mainnet upgrade before final authority revocation.
+A live V2 proof transaction finalized in tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`: Etude was the top-level program, Pump `BuyV2` ran as CPI, and the launch wallet activity record advanced to `totalCalls=3` / `totalEarnedRaw=3000`.
+
+The public builder still stays no-keypair and replaceable. To serve V2 wallet transactions from a builder, run it with `STOCX_ENABLE_V2_BUILD=1`; without that flag it fails closed.

@@ -58,7 +58,9 @@ const DEFAULT_ALT = new PublicKey("FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG"
 const DEFAULT_BASE_AMOUNT_RAW = "1000000000000";
 const DEFAULT_SLIPPAGE_BPS = 100;
 const DEFAULT_SIDE = 0;
+const DEFAULT_MODE = process.env.STOCX_BUILDER_MODE || "v1";
 const DEFAULT_PORT = 8798;
+const V2_BUILDER_ENABLED = process.env.STOCX_ENABLE_V2_BUILD === "1";
 const RATE_LIMIT_WINDOW_MS = Number(process.env.STOCX_RATE_LIMIT_WINDOW_MS || 60000);
 const RATE_LIMIT_MAX = Number(process.env.STOCX_RATE_LIMIT_MAX || 30);
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -89,6 +91,7 @@ Options:
   --base-amount <raw>      Default ${DEFAULT_BASE_AMOUNT_RAW} raw STOCX.
   --slippage-bps <bps>     Default ${DEFAULT_SLIPPAGE_BPS}.
   --side <0|1>             Default ${DEFAULT_SIDE}; alternating side earns the flip reward after cooldown.
+  --mode <v1|v2>            Default ${DEFAULT_MODE}. v2 build output requires STOCX_ENABLE_V2_BUILD=1.
   --include-base-ata <mode>  always | auto | never. Default always.
 
 All modes are no-keypair. "build" returns an unsigned v0 transaction for a wallet to sign.
@@ -122,6 +125,12 @@ function pubkeyArg(name, fallback = null, argv = process.argv) {
   const raw = argValue(name, fallback, argv);
   if (!raw) return null;
   return new PublicKey(raw);
+}
+
+function modeArg(argv = process.argv) {
+  const mode = String(argValue("--mode", DEFAULT_MODE, argv)).toLowerCase();
+  if (!["v1", "v2"].includes(mode)) throw new Error("--mode must be v1 or v2");
+  return mode;
 }
 
 function makeConnection() {
@@ -431,7 +440,39 @@ function makeRecordActivityIx({ user, state, side }) {
   });
 }
 
-async function buildInstructions({ user, state, amount, side, includeBaseAta }) {
+function makeBuyAndRewardIx({ user, state, side, pumpIx }) {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: user, isSigner: true, isWritable: true },
+      { pubkey: state.configPda, isSigner: false, isWritable: false },
+      { pubkey: state.potTslaxAta, isSigner: false, isWritable: true },
+      { pubkey: state.associatedQuoteUser, isSigner: false, isWritable: true },
+      { pubkey: state.potAuthority, isSigner: false, isWritable: false },
+      { pubkey: TSLAX_MINT, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: state.activityRecord, isSigner: false, isWritable: true },
+      { pubkey: STOCX_MINT, isSigner: false, isWritable: false },
+      { pubkey: state.associatedBaseUser, isSigner: false, isWritable: true },
+      { pubkey: PUMP_PROGRAM_ID, isSigner: false, isWritable: false },
+      ...pumpIx.keys,
+    ],
+    data: Buffer.concat([
+      Buffer.from([
+        3,
+        state.configBump,
+        state.potBump,
+        side,
+        state.activityBump,
+      ]),
+      pumpIx.data,
+    ]),
+  });
+}
+
+async function buildInstructions({ user, state, amount, side, includeBaseAta, mode }) {
   const fixedFeeRecipient = state.global.feeRecipient;
   const buyIx = await PUMP_SDK.getBuyV2InstructionRaw({
     user,
@@ -449,6 +490,10 @@ async function buildInstructions({ user, state, amount, side, includeBaseAta }) 
     { name: "compute_limit", ix: ComputeBudgetProgram.setComputeUnitLimit({ units: 500000 }) },
     { name: "priority_fee", ix: ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }) },
   ];
+  if (mode === "v2") {
+    named.push({ name: "buy_and_reward", ix: makeBuyAndRewardIx({ user, state, side, pumpIx: buyIx }) });
+    return named;
+  }
   const createBase = includeBaseAta === "always" || (includeBaseAta === "auto" && !state.accountInfo.baseAtaExists);
   if (createBase) {
     named.push({
@@ -498,11 +543,28 @@ function labelInstructionAccounts(namedInstructions) {
     "event_authority",
     "program",
   ];
+  const buyAndRewardLabels = [
+    "caller",
+    "etude_config",
+    "pot_token_account",
+    "caller_quote_token_account",
+    "pot_authority",
+    "quote_mint",
+    "token_2022_program",
+    "system_program",
+    "associated_token_program",
+    "activity_record",
+    "base_mint",
+    "caller_base_token_account",
+    "pump_program",
+    ...buyLabels.map((label) => `pump.${label}`),
+  ];
   const labelSets = {
     compute_limit: [],
     priority_fee: [],
     create_user_base_ata: ["payer", "ata", "wallet", "mint", "system_program", "token_program"],
     buy_v2: buyLabels,
+    buy_and_reward: buyAndRewardLabels,
     record_activity: [
       "caller",
       "etude_config",
@@ -697,7 +759,7 @@ async function readLiveAlt(connection, altAddress) {
   };
 }
 
-function gateReport({ user, state, amount, side }) {
+function gateReport({ user, state, amount, side, mode }) {
   const failures = [];
   const warnings = [];
   if (!state.config) failures.push("Etude config PDA is missing");
@@ -724,6 +786,9 @@ function gateReport({ user, state, amount, side }) {
     failures.push("STOCX creator is not the fee-sharing config PDA");
   }
   if (!state.accountInfo.baseAtaExists) warnings.push("player STOCX ATA will be created idempotently in the same transaction");
+  if (mode === "v2" && !V2_BUILDER_ENABLED) {
+    failures.push("V2 buy_and_reward is live, but this builder requires STOCX_ENABLE_V2_BUILD=1 before returning V2 transactions");
+  }
   if (state.accountInfo.activity?.isInit === 1) {
     warnings.push("player already has an activity record; cooldown and side-flip rules apply");
   }
@@ -762,10 +827,10 @@ function b58encode(bytes) {
   return out;
 }
 
-async function buildForUser({ user, altAddress, amount, slippageBps, side, includeBaseAta, serialize }) {
+async function buildForUser({ user, altAddress, amount, slippageBps, side, includeBaseAta, mode, serialize }) {
   const connection = makeConnection();
   const state = await readLiveState(connection, user, amount, slippageBps);
-  const named = await buildInstructions({ user, state, amount, side, includeBaseAta });
+  const named = await buildInstructions({ user, state, amount, side, includeBaseAta, mode });
   const labelMap = labelInstructionAccounts(named);
   const staticMap = staticReasons(user, named);
   const lookupRows = lookupCandidates(named, staticMap, labelMap);
@@ -776,7 +841,7 @@ async function buildForUser({ user, altAddress, amount, slippageBps, side, inclu
   const globalSyntheticAlt = compileV0(named, user, [syntheticLookupTable(user, globalLookupRows)]);
   const liveAlt = await readLiveAlt(connection, altAddress);
   const liveAltCompile = liveAlt.table ? compileV0(named, user, [liveAlt.table]) : null;
-  const gate = gateReport({ user, state, amount, side });
+  const gate = gateReport({ user, state, amount, side, mode });
   const latest = serialize && gate.ok && liveAltCompile?.fitsPacket
     ? await retry("latest blockhash", () => connection.getLatestBlockhash("confirmed"))
     : null;
@@ -797,6 +862,7 @@ async function buildForUser({ user, altAddress, amount, slippageBps, side, inclu
     pumpPage: `https://pump.fun/coin/${STOCX_MINT.toBase58()}`,
     user: user.toBase58(),
     program: PROGRAM_ID.toBase58(),
+    mode,
     alt: liveAlt.summary,
     accounts: {
       config: state.configPda.toBase58(),
@@ -876,7 +942,9 @@ async function buildForUser({ user, altAddress, amount, slippageBps, side, inclu
       : (liveAltCompile?.fitsPacket ? "blocked_by_wallet_or_chain_gate" : "blocked_by_packet_size"),
     status: !liveAltCompile?.fitsPacket
       ? "STATUS: STOCX_PLAYER_TRADE_RECORD_NEEDS_ALT_OR_SMALLER_PACKET"
-      : (gate.ok ? "OK: STOCX_PLAYER_TRADE_RECORD_READY" : "STATUS: STOCX_PLAYER_GATES_BLOCKED"),
+      : (gate.ok
+        ? (mode === "v2" ? "OK: STOCX_PLAYER_BUY_AND_REWARD_READY" : "OK: STOCX_PLAYER_TRADE_RECORD_READY")
+        : "STATUS: STOCX_PLAYER_GATES_BLOCKED"),
   };
 }
 
@@ -886,12 +954,13 @@ function parseBuildArgs(argv = process.argv) {
   const amount = u64Arg("--base-amount", DEFAULT_BASE_AMOUNT_RAW, argv);
   const slippageBps = intArg("--slippage-bps", DEFAULT_SLIPPAGE_BPS, argv);
   const side = intArg("--side", DEFAULT_SIDE, argv);
+  const mode = modeArg(argv);
   const includeBaseAta = argValue("--include-base-ata", "always", argv);
   if (!["always", "auto", "never"].includes(includeBaseAta)) {
     throw new Error("--include-base-ata must be always, auto, or never");
   }
   const altAddress = pubkeyArg("--alt", DEFAULT_ALT.toBase58(), argv);
-  return { user, altAddress, amount, slippageBps, side, includeBaseAta };
+  return { user, altAddress, amount, slippageBps, side, includeBaseAta, mode };
 }
 
 const rateBuckets = new Map();
@@ -1021,6 +1090,8 @@ async function commandServe() {
       const amount = new BN(String(value("baseAmountRaw", DEFAULT_BASE_AMOUNT_RAW)));
       const slippageBps = Number(value("slippageBps", DEFAULT_SLIPPAGE_BPS));
       const side = Number(value("side", DEFAULT_SIDE));
+      const mode = String(value("mode", DEFAULT_MODE)).toLowerCase();
+      if (!["v1", "v2"].includes(mode)) throw new Error("mode must be v1 or v2");
       const includeBaseAta = value("includeBaseAta", "always");
       const result = await buildForUser({
         user,
@@ -1029,6 +1100,7 @@ async function commandServe() {
         slippageBps,
         side,
         includeBaseAta,
+        mode,
         serialize: url.pathname === "/api/stocx/build" || url.pathname === "/api/stocx/pay",
       });
       if (url.pathname === "/api/stocx/pay") {

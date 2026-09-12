@@ -33,6 +33,20 @@ POST http://127.0.0.1:8798/api/stocx/build
 { "user": "<wallet public key>" }
 ```
 
+The default path is `v1`: top-level Pump `buy_v2` followed by Etude `record_activity`.
+
+The live `v2` path builds a single Etude `buy_and_reward` instruction that CPI-calls Pump and then pays the reward. It is available with:
+
+```text
+{ "user": "<wallet public key>", "mode": "v2" }
+```
+
+V2 was upgraded on mainnet and proofed in tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`. Wallet-build output still requires an explicit process-level guard so an operator cannot switch modes accidentally:
+
+```powershell
+$env:STOCX_ENABLE_V2_BUILD="1"
+```
+
 Solana Action / Solana Pay shape:
 
 ```text

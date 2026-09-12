@@ -35,6 +35,8 @@
 - Quick tunnels are launch bridges, not durable infrastructure: on 2026-09-12 the previous `removed-confident-compatible-entertaining.trycloudflare.com` hostname no longer resolved, so the dashboard had to move to a fresh V2 tunnel.
 - A `0.04 SOL` Semir top-up can refill one more V2 player run by swapping ExactIn to TSLAx, keeping a `0.10 SOL` launch-wallet reserve, and forwarding `0.010 TSLAx`; after this route Semir measured `0.01252951 TSLAx` against a current cap of `0.01134229 TSLAx`.
 - The first public-wallet V2 run succeeded through the quick builder: after signing, Semir's activity moved from `3` to `4`, STOCX rose to `4,072,698.645112`, and the builder correctly returned to a low-TSLAx gate.
+- Cloudflare Worker can package the no-keypair builder, but public RPC is the real launch bottleneck: Solana Labs mainnet RPC returns 403 from Cloudflare IPs, PublicNode returns 429 under Worker traffic, and Tatum's unauthenticated gateway works but only at a tiny free quota.
+- The branded tunnel hostname needs Cloudflare-managed/proxied DNS, not only a plain CNAME to `cfargotunnel.com`; otherwise Windows can resolve it to tunnel-internal IPv6 data and HTTPS fails before reaching the local builder.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -69,6 +71,7 @@
 - Post-fourth-top-up V2 builder measurement/build: `https://exhaust-relaxation-compiled-martha.trycloudflare.com/api/stocx/measure` returned `OK: STOCX_PLAYER_BUY_AND_REWARD_READY`, Semir TSLAx `0.01252951`, current quote cap `0.01134229`, live ALT size `665` bytes / `567` bytes headroom, pot `0.05994 TSLAx`, and activity record `totalCalls=3` / `totalEarnedRaw=3000`; `/api/stocx/build` returned `ready_for_wallet_signature` with a `665`-byte V2 transaction.
 - Fourth Semir-wallet Reward TX and first public V2 wallet proof: `43SJiAPpXKwc8AMLEky2Zwc7L4ULFSk2FmUMDmmVDucfEqE4XqgkhVCrGj6oNadcszhjsq8YYSsjHndHkcPWHxup`.
 - Post-fourth-proof readback: tx `err:null`, slot `446495301`, Etude top-level index `2`, Pump and Token-2022 inner under that instruction, Semir STOCX `4,072,698.645112`, Semir TSLAx `0.00130952`, pot TSLAx `0.05993`, activity `94GM...U87` at `totalCalls=4` / `totalEarnedRaw=4000`.
+- Cloudflare Worker candidate: `https://stocx-player-builder.scumutator.workers.dev/health` returned `{ ok: true, mode: "v2", v2BuilderEnabled: true }`; `/api/stocx/measure` succeeded through Tatum once, then Tatum reported `5 requests per minute`, while PublicNode reported 429 and Solana Labs RPC reported 403 from the Worker.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.
@@ -88,6 +91,7 @@
 - Keep `--min-reserve-lamports` explicit on proof-only swaps so the command output states exactly which SOL reserve was accepted.
 - For temporary public testing after the V2 upgrade, run the builder with `STOCX_BUILDER_MODE=v2` and `STOCX_ENABLE_V2_BUILD=1`; health, `/actions.json`, and `/api/stocx/measure` should all be checked through the tunnel before updating the static site.
 - For player refills from a small SOL top-up, run `stocx_tslax_send_to_semir.js status --amount-raw <raw>` before send so the default `0.014 TSLAx` transfer amount cannot accidentally exceed the launch wallet's post-swap TSLAx balance.
+- For a durable public STOCX builder, use the Worker only after configuring a private Solana RPC key/endpoint; until then, a local no-keypair builder behind a verified quick tunnel is the only launch path that passed `measure` reliably from the public page.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.
@@ -99,3 +103,4 @@
 - Keep `v1` as the public builder default until a stable hosted builder endpoint is configured for V2 and monitored; V2 can already be served by an operator with `STOCX_ENABLE_V2_BUILD=1`.
 - V2 is now the preferred on-chain reward shape after proof; keep public builders operator-gated with `STOCX_ENABLE_V2_BUILD=1` until a stable hosted endpoint is configured and watched.
 - Current public test bridge is the V2 quick tunnel above; durable `builder.ratchetx.xyz` remains the production infrastructure task.
+- Do not switch `stocx.ratchetx.xyz` to the Worker builder as primary while it depends on unauthenticated public RPC; keep the current verified quick tunnel primary and document the Worker as a packaged candidate.

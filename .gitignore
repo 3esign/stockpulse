@@ -1,0 +1,3 @@
+builder/node_modules/
+builder/.wrangler-dry-run/
+builder/*.log

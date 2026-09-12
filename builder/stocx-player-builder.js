@@ -2,8 +2,6 @@
 // No keypairs are read. No signatures are made. No transactions are sent.
 // It builds the unsigned buy_v2 + record_activity transaction for a player
 // wallet so the browser/API layer can hand it to Phantom/Solflare.
-const http = require("http");
-
 function incognitoHeaders() {
   return {
     accept: "application/json",
@@ -37,9 +35,10 @@ const {
   bondingCurvePda,
   computeFeesBps,
   feeSharingConfigPda,
+  GLOBAL_PDA,
   getBuySolAmountFromTokenAmount,
   normalizeQuoteMint,
-  OnlinePumpSdk,
+  PUMP_FEE_CONFIG_PDA,
   PUMP_FEE_PROGRAM_ID,
   PUMP_PROGRAM_ID,
   PUMP_SDK,
@@ -63,6 +62,7 @@ const DEFAULT_PORT = 8798;
 const V2_BUILDER_ENABLED = process.env.STOCX_ENABLE_V2_BUILD === "1";
 const RATE_LIMIT_WINDOW_MS = Number(process.env.STOCX_RATE_LIMIT_WINDOW_MS || 60000);
 const RATE_LIMIT_MAX = Number(process.env.STOCX_RATE_LIMIT_MAX || 30);
+const DEFAULT_RETRY_ATTEMPTS = Number(process.env.STOCX_RETRY_ATTEMPTS || 6);
 const DEFAULT_ALLOWED_ORIGINS = [
   "*",
   "https://stocx.ratchetx.xyz",
@@ -133,10 +133,10 @@ function modeArg(argv = process.argv) {
   return mode;
 }
 
-function makeConnection() {
-  return new Connection(RPC, {
+function makeConnection(rpcUrl = RPC, rpcFetch = null) {
+  return new Connection(rpcUrl, {
     commitment: "confirmed",
-    fetchMiddleware: (url, options, fetch) => fetch(url, {
+    fetchMiddleware: (url, options, fetch) => (rpcFetch || fetch)(url, {
       ...options,
       headers: {
         ...incognitoHeaders(url, { vrsta: "json" }),
@@ -146,9 +146,9 @@ function makeConnection() {
   });
 }
 
-async function retry(label, fn) {
+async function retry(label, fn, attempts = DEFAULT_RETRY_ATTEMPTS) {
   let lastError = null;
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await fn();
     } catch (err) {
@@ -158,13 +158,13 @@ async function retry(label, fn) {
         || msg.includes("503")
         || msg.includes("Too Many Requests")
         || msg.includes("Service unavailable");
-      if (attempt < 6) {
+      if (attempt < attempts) {
         const delayMs = transient ? 1000 * (2 ** (attempt - 1)) : 400 * attempt;
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
   }
-  throw new Error(`${label} failed after 6 attempts: ${lastError.message || lastError}`);
+  throw new Error(`${label} failed after ${attempts} attempts: ${lastError.message || lastError}`);
 }
 
 function pda(seeds, programId) {
@@ -282,26 +282,37 @@ function buyCostBreakdown(global, feeConfig, stocxSupply, bondingCurve, amount, 
   };
 }
 
-async function readLiveState(connection, user, amount, slippageBps) {
-  const onlineSdk = new OnlinePumpSdk(connection);
+async function readLiveState(connection, user, amount, slippageBps, retryAttempts = DEFAULT_RETRY_ATTEMPTS) {
   const [configPda, configBump] = pda([ETUDE_CONFIG_SEED], PROGRAM_ID);
   const [potAuthority, potBump] = pda([ETUDE_POT_SEED], PROGRAM_ID);
-  const baseMintInfoPromise = retry("mint accounts", () =>
-    connection.getMultipleAccountsInfo([STOCX_MINT, TSLAX_MINT], "confirmed"));
-  const [global, feeConfig, bondingCurve, resolvedTslax, configInfo] = await Promise.all([
-    retry("pump global", () => onlineSdk.fetchGlobal()),
-    retry("pump fee config", () => onlineSdk.fetchFeeConfig()),
-    retry("STOCX bonding curve", () => onlineSdk.fetchBondingCurve(STOCX_MINT)),
-    retry("TSLAx quote resolve", () => onlineSdk.resolveQuoteMint(TSLAX_MINT)),
-    retry("Etude config", () => connection.getAccountInfo(configPda, "confirmed")),
-  ]);
-  const [stocxMintInfo, tslaxMintInfo] = await baseMintInfoPromise;
+  const bondingCurveAddress = bondingCurvePda(STOCX_MINT);
+  const [
+    globalInfo,
+    feeConfigInfo,
+    bondingCurveInfo,
+    stocxMintInfo,
+    tslaxMintInfo,
+    configInfo,
+  ] = await retry("core accounts", () => connection.getMultipleAccountsInfo([
+    GLOBAL_PDA,
+    PUMP_FEE_CONFIG_PDA,
+    bondingCurveAddress,
+    STOCX_MINT,
+    TSLAX_MINT,
+    configPda,
+  ], "confirmed"), retryAttempts);
+  if (!globalInfo) throw new Error(`Global account not found: ${GLOBAL_PDA.toBase58()}`);
+  if (!feeConfigInfo) throw new Error(`Fee config account not found: ${PUMP_FEE_CONFIG_PDA.toBase58()}`);
+  if (!bondingCurveInfo) throw new Error(`Bonding curve account not found: ${bondingCurveAddress.toBase58()}`);
   if (!stocxMintInfo) throw new Error("STOCX mint account is missing");
   if (!tslaxMintInfo) throw new Error("TSLAx mint account is missing");
+  const global = PUMP_SDK.decodeGlobal(globalInfo);
+  const feeConfig = PUMP_SDK.decodeFeeConfig(feeConfigInfo);
+  const bondingCurve = PUMP_SDK.decodeBondingCurve(bondingCurveInfo);
   const stocxMint = unpackMint(STOCX_MINT, stocxMintInfo, stocxMintInfo.owner);
   const tslaxMint = unpackMint(TSLAX_MINT, tslaxMintInfo, tslaxMintInfo.owner);
   const quoteMint = normalizeQuoteMint(bondingCurve.quoteMint);
-  const quoteTokenProgram = resolvedTslax.quoteTokenProgram;
+  const quoteTokenProgram = tslaxMintInfo.owner;
   const baseTokenProgram = stocxMintInfo.owner;
   const quoteWithoutSlippage = getBuySolAmountFromTokenAmount({
     global,
@@ -339,7 +350,7 @@ async function readLiveState(connection, user, amount, slippageBps) {
       associatedQuoteUser,
       potTslaxAta,
       activityRecord,
-    ], "confirmed"));
+    ], "confirmed"), retryAttempts);
   const config = decodeConfig(configInfo);
   const activity = decodeActivity(activityInfo);
   const quoteAccount = tokenAccountSummary(
@@ -727,10 +738,10 @@ function activeLength(table, currentSlot) {
   return Number(table.state.lastExtendedSlotStartIndex);
 }
 
-async function readLiveAlt(connection, altAddress) {
+async function readLiveAlt(connection, altAddress, retryAttempts = DEFAULT_RETRY_ATTEMPTS) {
   const [currentSlot, tableResponse] = await Promise.all([
-    retry("current slot", () => connection.getSlot("confirmed")),
-    retry("lookup table", () => connection.getAddressLookupTable(altAddress, { commitment: "confirmed" })),
+    retry("current slot", () => connection.getSlot("confirmed"), retryAttempts),
+    retry("lookup table", () => connection.getAddressLookupTable(altAddress, { commitment: "confirmed" }), retryAttempts),
   ]);
   const table = tableResponse.value;
   if (!table) {
@@ -759,7 +770,7 @@ async function readLiveAlt(connection, altAddress) {
   };
 }
 
-function gateReport({ user, state, amount, side, mode }) {
+function gateReport({ user, state, amount, side, mode, v2BuilderEnabled = V2_BUILDER_ENABLED }) {
   const failures = [];
   const warnings = [];
   if (!state.config) failures.push("Etude config PDA is missing");
@@ -786,7 +797,7 @@ function gateReport({ user, state, amount, side, mode }) {
     failures.push("STOCX creator is not the fee-sharing config PDA");
   }
   if (!state.accountInfo.baseAtaExists) warnings.push("player STOCX ATA will be created idempotently in the same transaction");
-  if (mode === "v2" && !V2_BUILDER_ENABLED) {
+  if (mode === "v2" && !v2BuilderEnabled) {
     failures.push("V2 buy_and_reward is live, but this builder requires STOCX_ENABLE_V2_BUILD=1 before returning V2 transactions");
   }
   if (state.accountInfo.activity?.isInit === 1) {
@@ -827,9 +838,22 @@ function b58encode(bytes) {
   return out;
 }
 
-async function buildForUser({ user, altAddress, amount, slippageBps, side, includeBaseAta, mode, serialize }) {
-  const connection = makeConnection();
-  const state = await readLiveState(connection, user, amount, slippageBps);
+async function buildForUser({
+  user,
+  altAddress,
+  amount,
+  slippageBps,
+  side,
+  includeBaseAta,
+  mode,
+  serialize,
+  rpcUrl = RPC,
+  v2BuilderEnabled = V2_BUILDER_ENABLED,
+  retryAttempts = DEFAULT_RETRY_ATTEMPTS,
+  rpcFetch = null,
+}) {
+  const connection = makeConnection(rpcUrl, rpcFetch);
+  const state = await readLiveState(connection, user, amount, slippageBps, retryAttempts);
   const named = await buildInstructions({ user, state, amount, side, includeBaseAta, mode });
   const labelMap = labelInstructionAccounts(named);
   const staticMap = staticReasons(user, named);
@@ -839,11 +863,11 @@ async function buildForUser({ user, altAddress, amount, slippageBps, side, inclu
   const noLookup = compileV0(named, user, []);
   const fullSyntheticAlt = compileV0(named, user, [syntheticLookupTable(user, lookupRows)]);
   const globalSyntheticAlt = compileV0(named, user, [syntheticLookupTable(user, globalLookupRows)]);
-  const liveAlt = await readLiveAlt(connection, altAddress);
+  const liveAlt = await readLiveAlt(connection, altAddress, retryAttempts);
   const liveAltCompile = liveAlt.table ? compileV0(named, user, [liveAlt.table]) : null;
-  const gate = gateReport({ user, state, amount, side, mode });
+  const gate = gateReport({ user, state, amount, side, mode, v2BuilderEnabled });
   const latest = serialize && gate.ok && liveAltCompile?.fitsPacket
-    ? await retry("latest blockhash", () => connection.getLatestBlockhash("confirmed"))
+    ? await retry("latest blockhash", () => connection.getLatestBlockhash("confirmed"), retryAttempts)
     : null;
   const liveTx = serialize && gate.ok && liveAlt.table && liveAltCompile?.fitsPacket
     ? compileV0(named, user, [liveAlt.table], latest.blockhash)
@@ -857,7 +881,7 @@ async function buildForUser({ user, altAddress, amount, slippageBps, side, inclu
   })();
 
   return {
-    rpc: RPC,
+    rpc: rpcUrl,
     ca: STOCX_MINT.toBase58(),
     pumpPage: `https://pump.fun/coin/${STOCX_MINT.toBase58()}`,
     user: user.toBase58(),
@@ -1029,6 +1053,7 @@ async function readRequestJson(req) {
 }
 
 async function commandServe() {
+  const http = require("http");
   const port = intArg("--port", DEFAULT_PORT);
   const defaultAlt = pubkeyArg("--alt", DEFAULT_ALT.toBase58());
   const server = http.createServer(async (req, res) => {
@@ -1144,7 +1169,22 @@ async function main() {
   console.log(result.status);
 }
 
-main().catch((err) => {
-  console.error(err.stack || err.message || err);
-  process.exit(1);
-});
+module.exports = {
+  BN,
+  PublicKey,
+  DEFAULT_ALT,
+  DEFAULT_BASE_AMOUNT_RAW,
+  DEFAULT_SLIPPAGE_BPS,
+  DEFAULT_SIDE,
+  DEFAULT_MODE,
+  buildForUser,
+  b64,
+  statusForError,
+};
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err.stack || err.message || err);
+    process.exit(1);
+  });
+}

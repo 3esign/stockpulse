@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stocx-player-builder",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-12",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "SOLANA_RPC_URL": "https://solana-mainnet.gateway.tatum.io",
+    "SOLANA_RPC_URLS": "https://solana-mainnet.gateway.tatum.io",
+    "STOCX_BUILDER_MODE": "v2",
+    "STOCX_ENABLE_V2_BUILD": "1",
+    "STOCX_ALLOWED_ORIGINS": "*",
+    "STOCX_ALT": "FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG",
+    "STOCX_RATE_LIMIT_WINDOW_MS": "60000",
+    "STOCX_RATE_LIMIT_MAX": "30",
+    "STOCX_RETRY_ATTEMPTS": "1"
+  }
+}

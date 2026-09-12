@@ -23,6 +23,10 @@ The public builder source is in `builder/`. Any operator can run it and pass its
 https://stocx.ratchetx.xyz/?builder=https://your-builder.example
 ```
 
+For the public launch page, the active builder route is the current Cloudflare Tunnel endpoint in `actions.json`.
+The Cloudflare Worker version is deployed at `https://stocx-player-builder.scumutator.workers.dev`
+and passes `/health`, but public Solana RPC limits make it a backup until a private RPC endpoint is configured.
+
 ## Final Lock Gate
 
 Two remaining authorities should be frozen only after the final immutable-launch decision:
@@ -39,5 +43,7 @@ Do not run those commands until the program is meant to be immutable forever.
 The V2 Etude `buy_and_reward` instruction was upgraded on mainnet in tx `4Sg7yFa7acon3FhU7uquGdi9dd2HFixNfq8VbXactfHMWeSniu483NgAmNVNGSutxPibFc3UM5g5SprjRqY8LfJ8`.
 
 A live V2 proof transaction finalized in tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`: Etude was the top-level program, Pump `BuyV2` ran as CPI, and the launch wallet activity record advanced to `totalCalls=3` / `totalEarnedRaw=3000`.
+
+Semir's public wallet then finalized the V2 path in tx `43SJiAPpXKwc8AMLEky2Zwc7L4ULFSk2FmUMDmmVDucfEqE4XqgkhVCrGj6oNadcszhjsq8YYSsjHndHkcPWHxup`: one Etude top-level call, inner Pump `BuyV2`, inner Token-2022 reward transfer, and activity record `94GMExvgEfs3kBLd2eE9FZCfBEAnux3tKsimAf6E3U87` at `totalCalls=4` / `totalEarnedRaw=4000`.
 
 The public builder still stays no-keypair and replaceable. To serve V2 wallet transactions from a builder, run it with `STOCX_ENABLE_V2_BUILD=1`; without that flag it fails closed.

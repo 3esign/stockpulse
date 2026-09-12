@@ -2,15 +2,15 @@
   "rules": [
     {
       "pathPattern": "/",
-      "apiPath": "https://videos-satisfied-plc-hospital.trycloudflare.com/api/stocx/pay"
+      "apiPath": "https://exhaust-relaxation-compiled-martha.trycloudflare.com/api/stocx/pay"
     },
     {
       "pathPattern": "/api/stocx/pay",
-      "apiPath": "https://videos-satisfied-plc-hospital.trycloudflare.com/api/stocx/pay"
+      "apiPath": "https://exhaust-relaxation-compiled-martha.trycloudflare.com/api/stocx/pay"
     },
     {
       "pathPattern": "/reward",
-      "apiPath": "https://videos-satisfied-plc-hospital.trycloudflare.com/api/stocx/pay"
+      "apiPath": "https://exhaust-relaxation-compiled-martha.trycloudflare.com/api/stocx/pay"
     }
   ]
 }

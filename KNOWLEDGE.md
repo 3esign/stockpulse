@@ -60,7 +60,7 @@
 - V2 proof funding swap: `3cRedt9sV9fLVU8doiQ4hgcS73a8BgjthKBkdF7K5TyCLDK6y3KjnxT9QzbxRAU2QzvafVaaicU2Zjg54yE72wQC`.
 - `tools/solana-cli/scripts-scratch/stocx_v2_proof_sender.js send --send` produced V2 proof tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`.
 - Post-V2-proof readback: Etude top-level, Pump `BuyV2` as CPI, deployer STOCX `3,000,000`, deployer TSLAx `0.00133745`, pot TSLAx `0.05994`, deployer activity `EUuE...ZTg` at `totalCalls=3` / `totalEarnedRaw=3000`.
-- Fresh V2 quick builder: `https://videos-satisfied-plc-hospital.trycloudflare.com` returned health 200, `/actions.json` 200, and `/api/stocx/measure` in `mode: v2`; Semir wallet readback showed `0.00252951 TSLAx` against a current need of `0.01134229 TSLAx`.
+- Fresh V2 quick builder: `https://exhaust-relaxation-compiled-martha.trycloudflare.com` returned health 200, `/actions.json` 200, and `/api/stocx/measure` in `mode: v2`; Semir wallet readback showed `0.00252951 TSLAx` against a current need of `0.01134229 TSLAx`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.

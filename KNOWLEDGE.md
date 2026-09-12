@@ -31,6 +31,7 @@
 - V2 builder support should stay safe-gated even after the live upgrade: `mode=v2` may measure freely, but must not return a wallet-signable V2 transaction unless the operator deliberately sets `STOCX_ENABLE_V2_BUILD=1`.
 - V2 `buy_and_reward` is now more than a candidate: a mainnet proof shows one top-level Etude instruction can CPI-call Pump `BuyV2` and then pay TSLAx in the same call.
 - A small proof swap should use an explicit low reserve only when the following proof transaction is already sized and simulated; keep the default reserve guard conservative for normal funding.
+- Quick tunnels are launch bridges, not durable infrastructure: on 2026-09-12 the previous `removed-confident-compatible-entertaining.trycloudflare.com` hostname no longer resolved, so the dashboard had to move to a fresh V2 tunnel.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -59,6 +60,7 @@
 - V2 proof funding swap: `3cRedt9sV9fLVU8doiQ4hgcS73a8BgjthKBkdF7K5TyCLDK6y3KjnxT9QzbxRAU2QzvafVaaicU2Zjg54yE72wQC`.
 - `tools/solana-cli/scripts-scratch/stocx_v2_proof_sender.js send --send` produced V2 proof tx `3YiZCnFX4GjfUcGdniqHQDvgZ4oz8vC8kr9ryDFVJtsxUBPhiD53ekn4KzwudxxPX6e6qsorEfpqoNbecaaXZNm`.
 - Post-V2-proof readback: Etude top-level, Pump `BuyV2` as CPI, deployer STOCX `3,000,000`, deployer TSLAx `0.00133745`, pot TSLAx `0.05994`, deployer activity `EUuE...ZTg` at `totalCalls=3` / `totalEarnedRaw=3000`.
+- Fresh V2 quick builder: `https://videos-satisfied-plc-hospital.trycloudflare.com` returned health 200, `/actions.json` 200, and `/api/stocx/measure` in `mode: v2`; Semir wallet readback showed `0.00252951 TSLAx` against a current need of `0.01134229 TSLAx`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.
@@ -76,6 +78,7 @@
 - Add experimental builder modes behind explicit flags when the live program does not yet support them; a public no-keypair builder must fail closed rather than hand wallets transactions known to target an undeployed instruction.
 - Use `stocx_v2_proof_sender.js simulate` before `send --send`; it rebuilds a fresh unsigned V2 transaction, signs locally, and prints simulation logs before any send.
 - Keep `--min-reserve-lamports` explicit on proof-only swaps so the command output states exactly which SOL reserve was accepted.
+- For temporary public testing after the V2 upgrade, run the builder with `STOCX_BUILDER_MODE=v2` and `STOCX_ENABLE_V2_BUILD=1`; health, `/actions.json`, and `/api/stocx/measure` should all be checked through the tunnel before updating the static site.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.
@@ -86,3 +89,4 @@
 - Temporarily default production `stocx.ratchetx.xyz` to the verified quick builder so the public mobile `Check` button can work without Semir needing to preserve a long `builder=` query string.
 - Keep `v1` as the public builder default until a stable hosted builder endpoint is configured for V2 and monitored; V2 can already be served by an operator with `STOCX_ENABLE_V2_BUILD=1`.
 - V2 is now the preferred on-chain reward shape after proof; keep public builders operator-gated with `STOCX_ENABLE_V2_BUILD=1` until a stable hosted endpoint is configured and watched.
+- Current public test bridge is the V2 quick tunnel above; durable `builder.ratchetx.xyz` remains the production infrastructure task.

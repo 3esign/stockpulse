@@ -1,0 +1,18 @@
+{
+  "name": "stocx-player-builder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "No-keypair STOCX Reward TX builder for Solana Actions, Solana Pay, and the STOCX dashboard.",
+  "scripts": {
+    "start": "node stocx-player-builder.js serve --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG --port 8798",
+    "measure": "node stocx-player-builder.js measure --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG",
+    "build": "node stocx-player-builder.js build --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG"
+  },
+  "dependencies": {
+    "@pump-fun/pump-sdk": "^1.37.0",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
+    "bn.js": "^5.2.5"
+  }
+}

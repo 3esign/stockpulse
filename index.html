@@ -367,6 +367,44 @@
       min-width: 0;
     }
 
+    .trust-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+      min-width: 0;
+    }
+
+    .trust-card {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+        rgba(17, 20, 27, 0.86);
+    }
+
+    .trust-card strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    .trust-card .micro {
+      overflow-wrap: anywhere;
+    }
+
+    .trust-card.warning {
+      border-color: rgba(242, 189, 69, 0.3);
+      background:
+        linear-gradient(180deg, rgba(242, 189, 69, 0.08), transparent),
+        rgba(17, 20, 27, 0.86);
+    }
+
     .player-copy {
       display: grid;
       align-content: center;
@@ -811,6 +849,7 @@
       .layout,
       .brief,
       .player-trade,
+      .trust-strip,
       .prep-grid,
       .lower-grid {
         grid-template-columns: 1fr;
@@ -865,6 +904,10 @@
       }
 
       .status-band {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .trust-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
@@ -1010,6 +1053,12 @@
         padding: 12px;
       }
 
+      .trust-strip {
+        grid-template-columns: 1fr;
+        max-width: calc(100vw - 20px);
+        gap: 8px;
+      }
+
       .player-copy h2 {
         font-size: 21px;
         line-height: 1.08;
@@ -1117,7 +1166,7 @@
       <div class="brief-main">
         <p class="eyebrow">STOCX in one screen</p>
         <h2>A pump.fun token traded against tokenized Tesla stock.</h2>
-        <p>STOCX trades on the TSLAx pair. Players need TSLAx to enter the Reward TX path: one wallet signature buys STOCX with TSLAx, records proof on-chain, and pays a TSLAx reward from the pot when the gate passes.</p>
+        <p>STOCX trades on the TSLAx pair. Players need TSLAx to enter the Reward TX path: one wallet signature buys STOCX with TSLAx, records proof on-chain, and pays a TSLAx reward from the pot when the gate passes. The builder never signs or holds funds.</p>
         <div class="signal-strip" aria-label="Core STOCX facts">
           <div class="signal">
             <b>Pair</b>
@@ -1141,6 +1190,7 @@
           <button id="copyCa" class="action-link" type="button">Copy CA</button>
           <a class="action-link secondary" href="#playerTradeSection">Reward TX</a>
           <a class="action-link secondary" href="https://explorer.solana.com/address/4NseDVjR15RQJyMpquqRVdEWoWFMrjb4pnyXbhYy1tHE?cluster=mainnet-beta" target="_blank" rel="noreferrer">CA Explorer</a>
+          <a class="action-link" href="#trustSection">Trust</a>
           <a class="action-link" href="#prepSection">Proof</a>
         </div>
       </div>
@@ -1208,6 +1258,29 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="trust-strip" id="trustSection" aria-label="STOCX trust status">
+      <article class="trust-card">
+        <p class="eyebrow">on-chain rule</p>
+        <strong>Pump trade plus Etude proof.</strong>
+        <p class="micro">Reward TX must include a real STOCX/TSLAx Pump trade before Etude pays TSLAx.</p>
+      </article>
+      <article class="trust-card">
+        <p class="eyebrow">fee path</p>
+        <strong>Fee-share is locked.</strong>
+        <p class="micro">66.33% points at the TSLAx pot authority; adminRevoked is true on mainnet.</p>
+      </article>
+      <article class="trust-card">
+        <p class="eyebrow">builder</p>
+        <strong>Public, no-keypair builder.</strong>
+        <p class="micro">It returns an unsigned transaction only; any wallet or operator can replace it.</p>
+      </article>
+      <article class="trust-card warning">
+        <p class="eyebrow">final lock</p>
+        <strong>Program and ALT not frozen yet.</strong>
+        <p class="micro">V1 works now; V2 on-chain wrapper is measured before irreversible revocation.</p>
+      </article>
     </section>
 
     <section class="status-band" aria-label="Primary on-chain state">

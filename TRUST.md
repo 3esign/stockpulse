@@ -1,6 +1,6 @@
 # STOCX Trust Status
 
-STOCX V2 is live on Solana mainnet. The clean game rule is enforced by the Etude program: one `buy_and_reward` call CPI-calls Pump `buy_v2` for STOCX/TSLAx, then pays a TSLAx reward from the pot only after the trade succeeds. The older V1 top-level `buy_v2 + record_activity` path remains present for compatibility.
+STOCX V2 is live and immutable on Solana mainnet. The clean game rule is enforced by the Etude program: one `buy_and_reward` call CPI-calls Pump `buy_v2` for STOCX/TSLAx, then pays a TSLAx reward from the pot only after the trade succeeds. The older V1 top-level `buy_v2 + record_activity` path remains present for compatibility.
 
 ## On-Chain Now
 
@@ -10,8 +10,9 @@ STOCX V2 is live on Solana mainnet. The clean game rule is enforced by the Etude
 - Pot authority PDA: `2zcMDmgufo2cbosVeoxFaQkbirfLuqcLKbbDNFXZYFzh`
 - Pot TSLAx ATA: `8pZKZYm9dWBpVWVW7GJYN4UzT2WcK3cUQRNKpRU5grix`
 - Fee-share config: `Hs6Ls7x1qc8GdweZKXEuZ4DiMWGaABxdTptgXmq66ZVn`
+- Address lookup table: `FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
 
-The Pump fee-share config is locked with `adminRevoked: true`: 66.33% of creator fee-share points at the pot authority and 33.67% points at Semir's wallet.
+The Pump fee-share config is locked with `adminRevoked: true`: 66.33% of creator fee-share points at the pot authority and 33.67% points at Semir's wallet. The Etude ProgramData authority is now `none`, and the address lookup table authority is `null`.
 
 ## Builder Model
 
@@ -26,17 +27,14 @@ https://stocx.ratchetx.xyz/?builder=https://your-builder.example
 For the public launch page, the active builder route is the current Cloudflare Tunnel endpoint in `actions.json`.
 The Cloudflare Worker version is deployed at `https://stocx-player-builder.scumutator.workers.dev`
 and passes `/health`, but public Solana RPC limits make it a backup until a private RPC endpoint is configured.
+Production readiness for the Worker is explicit: `/health` must report `privateRpcConfigured: true`, `rpcReadyForProduction: true`, and `rpcSource: configured-secret`. If it reports `privateRpcConfigured: false`, it is using a known public endpoint or fallback and should not be treated as the launch builder under traffic.
 
-## Final Lock Gate
+## Final Lock Complete
 
-Two remaining authorities should be frozen only after the final immutable-launch decision:
+- ALT freeze tx: `EYwg8ij9WQv2Xqvjv42zd9S4zAbjr6ugRiv6GBnjN8ybAXHaVUa27phU76JM8ZeEsx9Hoief8h5iNoaPhuivAsS`
+- Program final tx: `2N5PQNz88cbGWPZu55ugZ6yeyU5qKH34at2qY3ZnYBtvrr7gvPXivRqMSMYL7U87QznjzYCF9T7eNL4Qzhh5Q8jh`
 
-```text
-solana address-lookup-table freeze FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG --authority <UPGRADE_AUTHORITY_KEYPAIR> --url https://api.mainnet-beta.solana.com --bypass-warning
-solana program set-upgrade-authority GPYNqnB9h5PnsmajMYkhCSDrfQiXmgePR57QFwuG6eDH --final --upgrade-authority <UPGRADE_AUTHORITY_KEYPAIR> --url https://api.mainnet-beta.solana.com
-```
-
-Do not run those commands until the program is meant to be immutable forever.
+Readback after final lock: `solana program show` reports `Authority: none`; `solana address-lookup-table get` reports `authority: null`.
 
 ## V2 Proof
 

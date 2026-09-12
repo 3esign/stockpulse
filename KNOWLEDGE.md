@@ -92,6 +92,9 @@
 - For temporary public testing after the V2 upgrade, run the builder with `STOCX_BUILDER_MODE=v2` and `STOCX_ENABLE_V2_BUILD=1`; health, `/actions.json`, and `/api/stocx/measure` should all be checked through the tunnel before updating the static site.
 - For player refills from a small SOL top-up, run `stocx_tslax_send_to_semir.js status --amount-raw <raw>` before send so the default `0.014 TSLAx` transfer amount cannot accidentally exceed the launch wallet's post-swap TSLAx balance.
 - For a durable public STOCX builder, use the Worker only after configuring a private Solana RPC key/endpoint; until then, a local no-keypair builder behind a verified quick tunnel is the only launch path that passed `measure` reliably from the public page.
+- Do not hardcode key-bearing Solana RPC URLs in `wrangler.jsonc`; declare `SOLANA_RPC_URLS` as a Worker secret, let `/health` expose only `privateRpcConfigured`/`rpcSource`, and keep the public fallback visibly degraded.
+- A Cloudflare Worker can still inherit or retain a configured public RPC URL; classify known public hosts (`api.mainnet-beta.solana.com`, PublicNode, keyless Tatum) separately so `/health` cannot label them production-ready.
+- Final STOCX lock is now irreversible by design: Etude ProgramData readback reports `hasAuthority:false`/`authority:null`, and the live ALT readback reports `authority:null`, so future builder/source changes cannot alter the on-chain V2 reward rule or lookup table address set.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.
@@ -104,3 +107,4 @@
 - V2 is now the preferred on-chain reward shape after proof; keep public builders operator-gated with `STOCX_ENABLE_V2_BUILD=1` until a stable hosted endpoint is configured and watched.
 - Current public test bridge is the V2 quick tunnel above; durable `builder.ratchetx.xyz` remains the production infrastructure task.
 - Do not switch `stocx.ratchetx.xyz` to the Worker builder as primary while it depends on unauthenticated public RPC; keep the current verified quick tunnel primary and document the Worker as a packaged candidate.
+- After final lock, stop describing STOCX as upgrade-pending; the remaining infrastructure gap is only RPC/provider durability for a builder, not on-chain trust.

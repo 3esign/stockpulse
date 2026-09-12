@@ -1276,10 +1276,10 @@
         <strong>Public, no-keypair builder.</strong>
         <p class="micro">It returns an unsigned transaction only; any wallet or operator can replace it.</p>
       </article>
-      <article class="trust-card warning">
+      <article class="trust-card">
         <p class="eyebrow">final lock</p>
-        <strong>Program and ALT not frozen yet.</strong>
-        <p class="micro">V2 is live and proofed; irreversible revocation still waits for a final go.</p>
+        <strong>Program immutable; ALT frozen.</strong>
+        <p class="micro">Upgrade authority is none and lookup-table authority is null on mainnet.</p>
       </article>
     </section>
 
@@ -1533,6 +1533,16 @@
         label: "Public wallet V2 proof",
         signature: "43SJiAPpXKwc8AMLEky2Zwc7L4ULFSk2FmUMDmmVDucfEqE4XqgkhVCrGj6oNadcszhjsq8YYSsjHndHkcPWHxup",
         tone: "live"
+      },
+      {
+        label: "ALT frozen",
+        signature: "EYwg8ij9WQv2Xqvjv42zd9S4zAbjr6ugRiv6GBnjN8ybAXHaVUa27phU76JM8ZeEsx9Hoief8h5iNoaPhuivAsS",
+        tone: "locked"
+      },
+      {
+        label: "Program immutable",
+        signature: "2N5PQNz88cbGWPZu55ugZ6yeyU5qKH34at2qY3ZnYBtvrr7gvPXivRqMSMYL7U87QznjzYCF9T7eNL4Qzhh5Q8jh",
+        tone: "locked"
       }
     ];
 
@@ -1623,6 +1633,7 @@
       activityRecordSummary: null,
       programElfHash: null,
       programDataMatchesLatest: false,
+      programAuthorityRevoked: false,
       walletProvider: null,
       walletAddress: "",
       builderEndpoint: BUILDER_ENDPOINT,
@@ -2006,6 +2017,7 @@
         app.signatures = Array.isArray(signatures) ? signatures : [];
         app.programElfHash = null;
         app.programDataMatchesLatest = false;
+        app.programAuthorityRevoked = false;
 
         const programDataBytes = accountDataBytes(app.accounts[ADDRESSES.programData]);
         if (programDataBytes && programDataBytes.length > 45) {
@@ -2014,6 +2026,7 @@
           app.programDataMatchesLatest =
             elfZone.length === PROGRAM_INTEGRITY.programDataElfZoneBytes &&
             app.programElfHash === PROGRAM_INTEGRITY.expectedPaddedSha256;
+          app.programAuthorityRevoked = programDataBytes[12] === 0;
         }
 
         app.tokenAmount = tokenAmountFromAccount(app.accounts[ADDRESSES.tslaxPotAta], 8, "TSLAx");
@@ -2188,13 +2201,14 @@
       const hasAccountRead = Boolean(Object.keys(app.accounts).length || app.lastError);
       const programSeen = Boolean(program && programData);
       const programLatest = Boolean(programSeen && app.programDataMatchesLatest);
+      const immutableProgram = Boolean(programLatest && app.programAuthorityRevoked);
       const programHashNote = app.programElfHash ? " / ELF " + app.programElfHash.slice(0, 8) : " / hash pending";
       const pulseCount = Math.max(KNOWN_TXS.length, app.signatures.length);
 
-      ui.metricProgram.textContent = !hasAccountRead ? "Checking" : (programLatest ? "Live" : (programSeen ? "Upgrade pending" : "Watching"));
-      ui.badgeProgram.textContent = !hasAccountRead ? "RPC" : (programLatest ? "24,768 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet"));
+      ui.metricProgram.textContent = !hasAccountRead ? "Checking" : (immutableProgram ? "Immutable" : (programLatest ? "Live" : (programSeen ? "Upgrade pending" : "Watching")));
+      ui.badgeProgram.textContent = !hasAccountRead ? "RPC" : (immutableProgram ? "final" : (programLatest ? "24,768 B" : (programDataSize ? String(programDataSize) + " B" : "mainnet")));
       ui.badgeProgram.className = !hasAccountRead ? "pill" : (programLatest ? "pill ok" : "pill warn");
-      ui.programSub.textContent = shortAddress(ADDRESSES.program) + " / target " + PROGRAM_INTEGRITY.expectedLocalSha256.slice(0, 8) + programHashNote;
+      ui.programSub.textContent = shortAddress(ADDRESSES.program) + " / target " + PROGRAM_INTEGRITY.expectedLocalSha256.slice(0, 8) + programHashNote + (immutableProgram ? " / authority none" : "");
 
       ui.metricConfig.textContent = !hasAccountRead ? "Checking" : (config ? "Initialized" : "Not sent");
       ui.badgeConfig.textContent = !hasAccountRead ? "PDA" : (config ? "live" : "gate");
@@ -2213,6 +2227,7 @@
 
       ui.stateList.innerHTML = [
         row("Latest reward build", programLatest ? "live" : (!hasAccountRead ? "checking" : "upgrade pending"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "24,768-byte V2 buy_and_reward artifact matches the padded ProgramData hash."),
+        row("Program authority", immutableProgram ? "none" : (!hasAccountRead ? "checking" : "open"), immutableProgram ? "ok" : (!hasAccountRead ? "idle" : "warn"), immutableProgram ? "Upgrade authority has been revoked on mainnet." : "Authority should be none after final lock."),
         row("STOCX CA", app.accounts[ADDRESSES.plannedGameMint] ? "live" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.plannedGameMint),
         row("Fee-share split", "locked", "ok", "66.33% pot authority / 33.67% Semir wallet, admin revoked."),
         row("Launch config PDA", config ? "exists" : (!hasAccountRead ? "checking" : "empty"), config ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.config),
@@ -2224,7 +2239,7 @@
       ui.walletList.innerHTML = [
         row("Semir wallet", semir ? sol(semir.lamports) : "n/a", semir ? "ok" : "warn", ADDRESSES.semir),
         row("Deployer wallet", deployer ? sol(deployer.lamports) : "n/a", deployer ? "ok" : "warn", ADDRESSES.deployer),
-        row("ProgramData rent", programData ? sol(programData.lamports) : "n/a", programData ? "ok" : "warn", "Upgradeable loader account watched for integrity."),
+        row("ProgramData rent", programData ? sol(programData.lamports) : "n/a", programData ? "ok" : "warn", immutableProgram ? "Immutable ProgramData watched for integrity." : "Upgradeable loader account watched for integrity."),
         row("Deployer TSLAx", app.deployerTslaxAmount || "reading", app.deployerTslaxAmount ? "ok" : "warn", ADDRESSES.deployerTslaxAta),
         row("Deployer STOCX", app.deployerStocxAmount || "reading", app.deployerStocxAmount ? "ok" : "warn", ADDRESSES.deployerStocxAta),
         row("TSLAx mint", app.accounts[ADDRESSES.tslaxMint] ? "found" : "check", app.accounts[ADDRESSES.tslaxMint] ? "ok" : "warn", ADDRESSES.tslaxMint)
@@ -2243,11 +2258,11 @@
       ].join("");
 
       ui.launchPrepList.innerHTML = [
-        row("1. Program upgrade", programLatest ? "done" : (!hasAccountRead ? "checking" : "needs go"), programLatest ? "ok" : (!hasAccountRead ? "idle" : "warn"), "V2 24,768-byte build is live on ProgramData."),
+        row("1. Program immutable", immutableProgram ? "done" : (!hasAccountRead ? "checking" : "needs go"), immutableProgram ? "ok" : (!hasAccountRead ? "idle" : "warn"), "V2 24,768-byte build is live and upgrade authority is none."),
         row("2. Token create", app.accounts[ADDRESSES.plannedGameMint] ? "done" : "checking", app.accounts[ADDRESSES.plannedGameMint] ? "ok" : (!hasAccountRead ? "idle" : "warn"), "CA is live on pump.fun: " + ADDRESSES.plannedGameMint),
         row("3. Fee sharing", "done", "ok", "Locked on-chain; pot authority is the primary shareholder."),
         row("4. Init config", config ? "done" : (!hasAccountRead ? "checking" : "needs go"), config ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Config and pot ATA are initialized on mainnet."),
-        row("5. ALT setup", app.accounts[ADDRESSES.lookupTable] ? "done" : "checking", app.accounts[ADDRESSES.lookupTable] ? "ok" : (!hasAccountRead ? "idle" : "warn"), ADDRESSES.lookupTable),
+        row("5. ALT frozen", app.accounts[ADDRESSES.lookupTable] ? "done" : "checking", app.accounts[ADDRESSES.lookupTable] ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Lookup table is frozen; address set cannot be changed."),
         row("6. Reward proof record", app.activityRecordSummary ? "done" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Finalized tx " + KNOWN_TXS[KNOWN_TXS.length - 1].signature)
       ].join("");
 
@@ -2270,7 +2285,7 @@
       ].join("");
 
       ui.manualGoList.innerHTML = [
-        row("Launch status", app.activityRecordSummary ? "successful" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Upgrade, init, ALT, TSLAx swap, pot fund, V1 proofs and V2 wallet proofs have known finalized signatures."),
+        row("Launch status", app.activityRecordSummary ? "successful" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Upgrade, init, frozen ALT, pot fund, V1 proofs, V2 wallet proofs, and final immutability have known finalized signatures."),
         row("SOL deployer reserve", deployer ? sol(deployer.lamports) : "reading", deployer ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Kept for maintenance and future guarded transactions."),
         row("TSLAx launch balance", app.deployerTslaxAmount || "reading", app.deployerTslaxAmount ? "ok" : (!hasAccountRead ? "idle" : "warn"), "Leftover quote token after pot fund and first buy."),
         row("Activity record", app.activityRecordSummary ? app.activityRecordSummary.totalCalls + " call" : "checking", app.activityRecordSummary ? "ok" : (!hasAccountRead ? "idle" : "warn"), app.activityRecordSummary ? app.activityRecordSummary.totalEarned + " earned, last " + app.activityRecordSummary.lastSide + " at " + app.activityRecordSummary.lastSeen : ADDRESSES.activityRecord)
@@ -2293,8 +2308,8 @@
         .join("");
 
       ui.accountList.innerHTML = [
-        accountRow("Program", ADDRESSES.program, Boolean(program), programLatest ? "latest V2 build live" : "program hash not verified"),
-        accountRow("ProgramData", ADDRESSES.programData, Boolean(programData), programDataSize ? programDataSize + " bytes" + programHashNote : "expected upgradeable loader account"),
+        accountRow("Program", ADDRESSES.program, Boolean(program), immutableProgram ? "immutable V2 build live" : (programLatest ? "latest V2 build live" : "program hash not verified")),
+        accountRow("ProgramData", ADDRESSES.programData, Boolean(programData), programDataSize ? programDataSize + " bytes" + programHashNote + (immutableProgram ? " / authority none" : "") : "expected loader account"),
         accountRow("Config PDA", ADDRESSES.config, Boolean(config), config ? "launch config found" : "config missing"),
         accountRow("Pot authority", ADDRESSES.potAuthority, Boolean(potAuthority), potAuthority ? "system account exists" : "derived PDA only"),
         accountRow("TSLAx pot ATA", ADDRESSES.tslaxPotAta, Boolean(potAta), app.tokenAmount || (potAta ? "token account found" : "will exist after init/funding")),

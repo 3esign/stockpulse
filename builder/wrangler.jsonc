@@ -10,9 +10,12 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "secrets": {
+    "required": [
+      "SOLANA_RPC_URLS"
+    ]
+  },
   "vars": {
-    "SOLANA_RPC_URL": "https://solana-mainnet.gateway.tatum.io",
-    "SOLANA_RPC_URLS": "https://solana-mainnet.gateway.tatum.io",
     "STOCX_BUILDER_MODE": "v2",
     "STOCX_ENABLE_V2_BUILD": "1",
     "STOCX_ALLOWED_ORIGINS": "*",

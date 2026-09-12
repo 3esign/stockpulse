@@ -17,6 +17,7 @@ const {
 
 const SITE_URL = "https://stocx.ratchetx.xyz";
 const SERVICE = "stocx-player-builder";
+const PUBLIC_RPC_FALLBACK = "https://solana-mainnet.gateway.tatum.io";
 const DEFAULT_ALLOWED_ORIGINS = [
   "*",
   SITE_URL,
@@ -82,10 +83,35 @@ function value(url, body, name, fallback = null) {
   return url.searchParams.get(name) ?? body[name] ?? fallback;
 }
 
+function configuredRpcValue(env) {
+  return String(env.SOLANA_RPC_URLS || env.SOLANA_RPC_URL || "").trim();
+}
+
+function isKnownPublicRpc(rpcUrl) {
+  let host = "";
+  try {
+    host = new URL(rpcUrl).host.toLowerCase();
+  } catch {
+    return false;
+  }
+  return [
+    "api.mainnet-beta.solana.com",
+    "solana-rpc.publicnode.com",
+    "solana-mainnet.gateway.tatum.io",
+  ].includes(host);
+}
+
 function workerDefaults(env) {
-  const rpcUrls = splitCsv(env.SOLANA_RPC_URLS || env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com");
+  const configuredRpc = configuredRpcValue(env);
+  const rpcUrls = splitCsv(configuredRpc || PUBLIC_RPC_FALLBACK);
+  const hasConfiguredPrivateRpc = Boolean(configuredRpc)
+    && rpcUrls.some((rpcUrl) => !isKnownPublicRpc(rpcUrl));
   return {
     rpcUrls,
+    rpcSource: !configuredRpc
+      ? "public-fallback"
+      : (hasConfiguredPrivateRpc ? "configured-secret" : "configured-public"),
+    privateRpcConfigured: hasConfiguredPrivateRpc,
     defaultAlt: env.STOCX_ALT || DEFAULT_ALT.toBase58(),
     defaultMode: String(env.STOCX_BUILDER_MODE || "v2").toLowerCase(),
     v2BuilderEnabled: env.STOCX_ENABLE_V2_BUILD === "1",
@@ -174,6 +200,9 @@ export default {
           mode: defaults.defaultMode,
           v2BuilderEnabled: defaults.v2BuilderEnabled,
           rpcFallbacks: defaults.rpcUrls.length,
+          rpcSource: defaults.rpcSource,
+          privateRpcConfigured: defaults.privateRpcConfigured,
+          rpcReadyForProduction: defaults.privateRpcConfigured,
         });
       }
 

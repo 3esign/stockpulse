@@ -31,9 +31,11 @@
 - Keep public builder endpoints origin-limited and throttled because every build request performs live mainnet RPC reads.
 - Keep player top-ups in a separate guarded helper from pot funding: both are Token-2022 transfers, but their intended destinations and failure modes are different enough to deserve different scripts.
 - For launch QA, a temporary builder tunnel is enough to prove the full wallet path, but public launch should still use a branded stable builder endpoint.
+- The public dashboard should default to `https://builder.ratchetx.xyz` on the `stocx.ratchetx.xyz` hostname, with query/local overrides only for QA; otherwise old temporary tunnel URLs can survive in localStorage and make the public page lie.
 
 ## Odluke
 - Keep the public page static and readable; add a guarded `Reward TX` panel now, and wire the actual public signer endpoint separately instead of pretending Pump-only trades can trigger rewards.
 - The first fold must carry the core mechanism before dashboard controls: `STOCX / TSLAx`, fee-fed TSLAx pot, and `buy + record proof` reward path.
 - Keep GitHub Pages as the readable dashboard, and require a separate HTTPS runtime for the reward builder instead of embedding a heavyweight wallet SDK into the static page.
 - Treat the temporary tunnel proof as successful QA, not final infrastructure; the production decision remains a stable `builder.ratchetx.xyz` runtime.
+- Use a Porkbun CNAME `builder` -> `71dbfdc0-3028-4c73-8586-95f34a02b6d1.cfargotunnel.com`; the existing local cloudflared ingress already maps `builder.ratchetx.xyz` to `127.0.0.1:8798`.

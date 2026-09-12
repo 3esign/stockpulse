@@ -1349,8 +1349,11 @@
     const LOCAL_BUILDER = ["127.0.0.1", "localhost"].includes(window.location.hostname)
       ? "http://127.0.0.1:8798"
       : "";
+    const PRODUCTION_BUILDER = window.location.hostname === "stocx.ratchetx.xyz"
+      ? "https://builder.ratchetx.xyz"
+      : "";
     const BUILDER_ENDPOINT = normalizeBuilderEndpoint(
-      QUERY.get("builder") || readStoredValue("stocxBuilderEndpoint") || LOCAL_BUILDER
+      QUERY.get("builder") || LOCAL_BUILDER || PRODUCTION_BUILDER || readStoredValue("stocxBuilderEndpoint")
     );
     if (QUERY.get("builder") && BUILDER_ENDPOINT) {
       writeStoredValue("stocxBuilderEndpoint", BUILDER_ENDPOINT);

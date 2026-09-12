@@ -34,6 +34,7 @@
 - A small proof swap should use an explicit low reserve only when the following proof transaction is already sized and simulated; keep the default reserve guard conservative for normal funding.
 - Quick tunnels are launch bridges, not durable infrastructure: on 2026-09-12 the previous `removed-confident-compatible-entertaining.trycloudflare.com` hostname no longer resolved, so the dashboard had to move to a fresh V2 tunnel.
 - A `0.04 SOL` Semir top-up can refill one more V2 player run by swapping ExactIn to TSLAx, keeping a `0.10 SOL` launch-wallet reserve, and forwarding `0.010 TSLAx`; after this route Semir measured `0.01252951 TSLAx` against a current cap of `0.01134229 TSLAx`.
+- The first public-wallet V2 run succeeded through the quick builder: after signing, Semir's activity moved from `3` to `4`, STOCX rose to `4,072,698.645112`, and the builder correctly returned to a low-TSLAx gate.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -66,6 +67,8 @@
 - Fourth Semir proof top-up swap: `2YkvsphG44rTWUbDiT22aGB52u3eFmdR5p1MHSsZBQ5AeqXsBGDqso6hvHyafUscFHz445eVuMuiD9H8qTjQAPZN`.
 - Fourth Semir TSLAx transfer: `2rLjZg8gLvJSjq6LXVyjLS71Y6XGpPXrzRpw3bP66zBuwGQA1dRksbnYX6WfPxunf6Y3xSydNMvgn2wkSxU5CGDN`.
 - Post-fourth-top-up V2 builder measurement/build: `https://exhaust-relaxation-compiled-martha.trycloudflare.com/api/stocx/measure` returned `OK: STOCX_PLAYER_BUY_AND_REWARD_READY`, Semir TSLAx `0.01252951`, current quote cap `0.01134229`, live ALT size `665` bytes / `567` bytes headroom, pot `0.05994 TSLAx`, and activity record `totalCalls=3` / `totalEarnedRaw=3000`; `/api/stocx/build` returned `ready_for_wallet_signature` with a `665`-byte V2 transaction.
+- Fourth Semir-wallet Reward TX and first public V2 wallet proof: `43SJiAPpXKwc8AMLEky2Zwc7L4ULFSk2FmUMDmmVDucfEqE4XqgkhVCrGj6oNadcszhjsq8YYSsjHndHkcPWHxup`.
+- Post-fourth-proof readback: tx `err:null`, slot `446495301`, Etude top-level index `2`, Pump and Token-2022 inner under that instruction, Semir STOCX `4,072,698.645112`, Semir TSLAx `0.00130952`, pot TSLAx `0.05993`, activity `94GM...U87` at `totalCalls=4` / `totalEarnedRaw=4000`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.

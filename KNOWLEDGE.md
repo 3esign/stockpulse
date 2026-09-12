@@ -21,6 +21,7 @@
 - If the mobile page shows the wallet as ready but `Sign trade` stays disabled after `Check`, check which builder endpoint the static page selected; a non-live default endpoint can make the wallet path look connected while the build request never succeeds.
 - Reward builder selection should be recoverable, not singular: the static page should try query, local, production, and stored endpoints in order, then save the endpoint that actually returned a valid builder response.
 - Semir's second wallet Reward TX succeeded before the latest builder fix was committed: when activity shows `totalCalls=2`, the next `Check` should honestly block on low remaining TSLAx unless another top-up is sent.
+- The `proof` swap target can be falsely red for player top-ups because it measures launch-wallet post-swap readiness, not the player's post-transfer readiness; use a separate `semir-topup` target for small SOL -> TSLAx -> Semir refills.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -34,6 +35,10 @@
 - Second Semir-wallet Reward TX: `5LztMCajS8ADqRi3FBLoZY13UWBfYYJuuEdjcnNx7ioDLgPpYRY2RGJGDfUvQCJZuqf1Q8z8tGuVswi95NGWKx5X`.
 - Quick HTTPS builder QA: `https://wrote-photographer-unsigned-traditional.trycloudflare.com/health`, `/api/stocx/measure`, and `/api/stocx/build` returned 200 with `Access-Control-Allow-Origin: https://stocx.ratchetx.xyz`.
 - Restarted quick HTTPS builder QA: `http://127.0.0.1:8798/health`, `https://removed-confident-compatible-entertaining.trycloudflare.com/health`, and `/api/stocx/measure` from `Origin: https://stocx.ratchetx.xyz` returned 200 after the local builder was restarted.
+- Third Semir proof top-up swap: `3hAzDyeGCVpKBxjfZjtMZMn2AgmrnoZLPhLiugZgMGtHaVou3emicVj7Nm2pLgRaZRkYi5G2iPKiJwZtYpLnTCLi`.
+- Third Semir TSLAx transfer: `3DGyDrcLbgWmdrVFmjPi1BSWiGr6Y4mNx172jMZVDCQxS4W7MsinwXo5TA9iN44XvHFcvyxT7Gt9qpv17toDZ9as`.
+- `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG --include-base-ata auto` returned `OK: STOCX_PLAYER_TRADE_RECORD_READY` after the 0.03 SOL top-up route.
+- `https://removed-confident-compatible-entertaining.trycloudflare.com/api/stocx/measure` and `/api/stocx/build` returned 200 from `Origin: https://stocx.ratchetx.xyz`; `/build` returned a wallet-signable `699`-byte v0+ALT transaction.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 
@@ -43,6 +48,7 @@
 - Keep public builder endpoints origin-limited and throttled because every build request performs live mainnet RPC reads.
 - Keep at least one known-good fallback builder URL in the static dashboard while the branded `builder.ratchetx.xyz` route is not durable, and surface endpoint failures as builder failures rather than wallet failures.
 - Keep player top-ups in a separate guarded helper from pot funding: both are Token-2022 transfers, but their intended destinations and failure modes are different enough to deserve different scripts.
+- Use `--target semir-topup` for a small source-wallet TSLAx refill that will be forwarded to Semir; reserve `--target proof` for cases where the launch wallet itself must retain enough TSLAx to sign a proof trade.
 - For launch QA, a temporary builder tunnel is enough to prove the full wallet path, but public launch should still use a branded stable builder endpoint.
 - The public dashboard should eventually default to `https://builder.ratchetx.xyz` on the `stocx.ratchetx.xyz` hostname, but until that branded runtime is healthy it should default to the current verified quick builder and keep query/local/stored fallbacks.
 

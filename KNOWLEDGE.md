@@ -25,6 +25,7 @@
 - A player can repeat the STOCX Reward TX after a TSLAx refill; the chain state moves the per-wallet activity PDA from `totalCalls=2` to `3`, then correctly blocks another same-size check on low TSLAx again.
 - "On-chain builder" is not an HTTP service on Solana; the real V2 shape is an Etude `buy_and_reward` instruction that CPI-calls Pump and then pays locally, while the current public builder remains off-chain and no-keypair.
 - A synthetic `buy_and_reward` wrapper has packet room: using today's Pump account set, one Etude instruction with 31 accounts measured `1204` bytes as legacy and `651` bytes through the live ALT, so the idea is feasible enough to test but not safe to mainnet-upgrade without LiteSVM coverage.
+- A public Action mapping is only real if both sides pass CORS: root `actions.json` and the target builder endpoint must answer `Access-Control-Allow-Origin: *`, otherwise Action-aware clients can discover the route and still fail before signing.
 
 ## Izvori
 - `tools/solana-cli/scripts-scratch/stocx_player_trade_record_builder.js measure --user HXFDaHyZ3i477z1BakiTWZg9UQN8rcreruuv9ifC1HvM --alt FfP2CFWniyUraM4g3vncRPfYQnFZ3HTTShHXsfSJGSJG`
@@ -46,6 +47,7 @@
 - Post-third-proof readback: Semir TSLAx `0.00252951`, pot TSLAx `0.05995`, activity record `94GM...U87` at `totalCalls=3` / `totalEarnedRaw=3000`; the next check is again balance-gated by the current `0.01132096 TSLAx` quote cap.
 - Public builder package: `builder/stocx-player-builder.js`, `builder/package.json`, and `builder/README.md`; it removes local Svemir imports and exposes `/health`, `/api/stocx/measure`, `/api/stocx/build`, `/api/stocx/pay`, and `/actions.json`.
 - Synthetic V2 wrapper measurement, no-send, 2026-09-12: one top-level Etude `buy_and_reward` instruction that would CPI into Pump measured `1204` bytes legacy with `28` bytes headroom, `1206` bytes v0 without lookup, `496` bytes synthetic full lookup, and `651` bytes with live ALT `FfP2...SJG`.
+- Live Actions route QA after restart: `https://stocx.ratchetx.xyz/actions.json`, `https://removed-confident-compatible-entertaining.trycloudflare.com/actions.json`, and `https://removed-confident-compatible-entertaining.trycloudflare.com/api/stocx/pay` returned 200 with `Access-Control-Allow-Origin: *`.
 - Phantom docs, checked 2026-09-11: versioned transactions with Address Lookup Tables are the supported path for larger account sets.
 - Solana Pay spec, checked 2026-09-11: transaction requests require an absolute HTTPS link, POST body `account`, and response field `transaction` as base64 serialized transaction.
 - Solana Actions docs, checked 2026-09-12: Actions are public APIs that return signable transactions; GET returns metadata, POST returns a signable transaction/message, and production needs `actions.json` plus CORS.
